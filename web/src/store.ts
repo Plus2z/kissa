@@ -254,14 +254,23 @@ export const useStore = create<AppState>()((set) => ({
     })),
 }))
 
-/** 是否有本地命令在跑:最后一个"非远程" output 气泡处于 running。
- *  远程命令气泡(SSH 内,commandId 以 r- 或 nest- 开头)的结束不影响 SSH 会话的运行态 */
-export function selectRunning(messages: ChatMessage[]): ChatMessage | undefined {
+/** 是否有命令在跑:
+ * - 本地环境(boundaryDepth === 0): 最后一个 output 气泡处于 running;
+ * - 嵌套环境(boundaryDepth > 0): 最后一个远程 nest- output 气泡处于 running。
+ * 远程提示符就绪时返回 undefined, 允许正常触发 Tab 补全与命令提交 */
+export function selectRunning(messages: ChatMessage[], boundaryDepth = 0): ChatMessage | undefined {
+  if (boundaryDepth > 0) {
+    const runningNest = [...messages]
+      .reverse()
+      .find((m) => m.kind === 'output' && m.commandId?.startsWith('nest-') && m.status === 'running')
+    return runningNest
+  }
   const last = [...messages]
     .reverse()
-    .find((m) => m.kind === 'output' && !m.commandId?.startsWith('r-') && !m.commandId?.startsWith('nest-'))
+    .find((m) => m.kind === 'output')
   return last?.status === 'running' ? last : undefined
 }
+
 
 /** 未读辅助:导出给组件使用 */
 export { COLLAPSE_THRESHOLD }

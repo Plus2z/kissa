@@ -40,7 +40,9 @@ export function InputBar() {
   const messages = useStore((s) => s.messages)
   const connStatus = useStore((s) => s.connStatus)
   const fullscreen = useStore((s) => s.fullscreen)
-  const running = !!selectRunning(messages) || fullscreen.active
+  const boundaryDepth = useStore((s) => s.boundaryDepth)
+  const inputRequest = useStore((s) => s.inputRequest)
+  const running = !!selectRunning(messages, boundaryDepth) || fullscreen.active || !!inputRequest
   const [value, setValue] = useState('')
   const [comp, setComp] = useState<CompState | null>(null)
   /** 危险命令待确认状态(前端预检;服务端仍是权威拦截层) */
@@ -125,6 +127,14 @@ export function InputBar() {
     if (running) {
       setValue('')
       setComp(null)
+      net.send({ type: 'stdin', data: text + '\n' })
+      return
+    }
+    if (boundaryDepth > 0) {
+      // 嵌套 Shell 场景：命令通过 stdin 流入远程 PTY，由哨兵/OSC133 自动切分子命令气泡
+      setValue('')
+      setComp(null)
+      setDanger(null)
       net.send({ type: 'stdin', data: text + '\n' })
       return
     }

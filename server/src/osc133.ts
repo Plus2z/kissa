@@ -40,10 +40,19 @@ const INPUT_SILENCE_MS = 600
 const OSC133_RE = /\x1b\]133;(A|B|C|D)(?:;([^\x07\x1b]*))?(?:\x07|\x1b\\)/g
 
 /**
- * 远程交互式 Shell 提示符特征识别正则:
- * 覆盖 user@host:~$ / root@host:~# / [user@host dir]$ / hostname% / bash-5.2$ 等
+ * 远程交互式 Shell 提示符特征识别:
+ * 覆盖 user@host:~$ / root@host:~# / [user@host dir]$ / hostname% / bash-5.2$ / (env) user@host:$ 等
  */
-const REMOTE_PROMPT_RE = /(?:^|\r|\n)(?:\[?[\w.-]+@[\w.-]+[^\n]*?\]?[#$%>]|\(?[a-zA-Z0-9_.-]+\)?[#$%>]|bash[-0-9.]*[#$%>]) ?(.*)$/
+export function isRemotePrompt(text: string): boolean {
+  const clean = stripAnsi(text).trimEnd()
+  if (clean.length === 0) return false
+  const lastLine = clean.slice(clean.lastIndexOf('\n') + 1).trim()
+  // 排除密码提示、确认提示等交互输入行
+  if (/password|passphrase|密码|\(y\/n\)|\[y\/n\]/i.test(lastLine)) {
+    return false
+  }
+  return /(?:\[?[\w.\-()]+@[\w.\-]+[^\n]*?\]?[#$%>❯]|\(?[a-zA-Z0-9_.\-()]+\)?[#$%>❯]|bash[-0-9.]*[#$%>❯])(?:\s*)$/.test(lastLine)
+}
 
 /** 已知 TUI / 全屏程序名单 */
 const TUI_PROGRAMS = new Set([
@@ -408,6 +417,10 @@ export class Osc133Annotator {
 
   private routeText(text: string): void {
     if (text.length === 0) return
+
+    // 只要有任何数据流到达，立即结束前序的 awaiting 状态，通知前端关闭输入框
+    this.endAwaiting()
+
     if (this.phase === 'echo') {
       this.echoBuf += text
     } else if (this.phase === 'output') {
@@ -431,10 +444,6 @@ export class Osc133Annotator {
       this.outBuf += text
       this.outDirty = true
       this.lastDataAt = Date.now()
-      if (this.awaiting && this.commandId !== null) {
-        this.awaiting = false
-        this.onEvent({ kind: 'input_request_end', commandId: this.commandId })
-      }
     }
   }
 
@@ -458,15 +467,7 @@ export class Osc133Annotator {
       mismatchCount: 0,
     }
 
-    // 探测窗口: 4 秒后若仍未升级为 OSC 133 且未收到哨兵, 自动尝试哨兵注入
-    frame.probeTimer = setTimeout(() => {
-      frame.probeTimer = null
-      if (frame.mode === 'probing') {
-        this.trySentinelInjection(frame)
-      }
-    }, 4000)
-    frame.probeTimer.unref?.()
-
+    // 注意：不使用盲等定时器！仅在检测到远程 Shell 提示符或 OSC 133 到达时才尝试哨兵注入
     this.nestedStack.push(frame)
     this.onEvent({
       kind: 'boundary_mode',
@@ -517,11 +518,10 @@ export class Osc133Annotator {
     this.outDirty = true
     this.lastDataAt = Date.now()
 
-    // 检查是否已经落入远程 Shell 提示符
-    const clean = stripAnsi(frame.lineBuf).replace(/\r$/, '')
-    const promptMatch = clean.match(REMOTE_PROMPT_RE)
-    if (promptMatch) {
-      // 成功落入远程 Shell 提示符 -> 立即尝试第二级哨兵注入 (无需盲等 4s 超时)
+    // 检查是否已经落入远程 Shell 提示符 (且不能是密码输入提示)
+    if (isRemotePrompt(frame.lineBuf)) {
+      // 成功落入远程 Shell 提示符 -> 立即清除输入状态，并尝试第二级哨兵注入
+      this.endAwaiting()
       frame.stage = 'idle'
       // 强制收敛任何残留全屏态
       if (this.altScreen) {
@@ -545,17 +545,18 @@ export class Osc133Annotator {
       targetName: frame.info.targetName,
     })
 
-    // 下发哨兵注入指令到 PTY (兼容 bash / zsh / sh / busybox / fish)
+    // 下发哨兵注入指令到 PTY (兼容 bash / zsh / sh / busybox)
     const injectionCmd = buildSentinelInjection(frame.token)
     this.onEvent({ kind: 'inject_stdin', data: ` ${injectionCmd}\n` })
 
-    // 第二级确认窗口 (4秒内未匹配到任何哨兵, 降级至第三级透传)
+    // 第二级确认窗口 (6秒内未匹配到任何哨兵, 降级至第三级透传)
+    if (frame.sentinelTimer) clearTimeout(frame.sentinelTimer)
     frame.sentinelTimer = setTimeout(() => {
       frame.sentinelTimer = null
       if (frame.mode === 'sentinel' && frame.stage === 'pre') {
         this.fallbackToPassthrough(frame)
       }
-    }, 4000)
+    }, 6000)
     frame.sentinelTimer.unref?.()
   }
 
@@ -589,7 +590,8 @@ export class Osc133Annotator {
             clearTimeout(frame.sentinelTimer)
             frame.sentinelTimer = null
           }
-          // 进入 idle 时强制收敛全屏状态
+          // 进入 idle 时强制收敛全屏状态与输入状态
+          this.endAwaiting()
           if (this.altScreen) {
             this.altScreen = false
             this.emitFullscreenEdge(true)
@@ -598,9 +600,9 @@ export class Osc133Annotator {
           continue
         }
         // 若在 pre 阶段收到常见提示符, 切换为 idle
-        const clean = stripAnsi(frame.lineBuf).replace(/\r$/, '')
-        if (clean.match(REMOTE_PROMPT_RE)) {
+        if (isRemotePrompt(frame.lineBuf)) {
           frame.stage = 'idle'
+          this.endAwaiting()
           if (this.altScreen) {
             this.altScreen = false
             this.emitFullscreenEdge(true)
@@ -610,7 +612,8 @@ export class Osc133Annotator {
       }
 
       if (frame.stage === 'idle') {
-        // 在 idle 阶段收敛全屏态
+        // 在 idle 阶段收敛全屏态与输入态
+        this.endAwaiting()
         if (this.altScreen) {
           this.altScreen = false
           this.emitFullscreenEdge(true)
@@ -622,6 +625,7 @@ export class Osc133Annotator {
         frame.lineBuf = frame.lineBuf.slice(nl + 1)
         if (line.length === 0) continue
         if (line.includes(markerPrefix)) continue
+        if (isRemotePrompt(line)) continue // 过滤掉提示符行
 
         this.startNestedCommand(frame, line)
         frame.stage = 'out'
@@ -639,6 +643,7 @@ export class Osc133Annotator {
           frame.outBuf += (frame.outBuf.length > 0 && before.length > 0 ? '\n' : '') + before
           this.endNestedCommand(frame, ec)
           frame.stage = 'idle'
+          this.endAwaiting()
           // 命令结束回到 idle 时强制退出全屏
           if (this.altScreen) {
             this.altScreen = false
@@ -701,6 +706,16 @@ export class Osc133Annotator {
   private tick(): void {
     if (this.phase !== 'output' || this.commandId === null || this.awaiting || this.outBuf.length === 0) {
       return
+    }
+    // 若当前正处于嵌套 Shell 的准备输入阶段 (idle), 绝不误报密码等待
+    if (this.nestedStack.length > 0) {
+      const top = this.nestedStack[this.nestedStack.length - 1]!
+      if (top.stage === 'idle') {
+        return
+      }
+      if (top.mode === 'sentinel' && top.stage !== 'out') {
+        return
+      }
     }
     if (Date.now() - this.lastDataAt < INPUT_SILENCE_MS) return
     const rendered = renderForAnnotation(this.outBuf)

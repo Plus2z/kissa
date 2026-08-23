@@ -4,9 +4,9 @@
  * 验证目标:
  * 1. 嵌套 Shell 命令触发规则匹配 (ssh / sudo -i / docker exec -it)
  * 2. 第一级: 嵌套环境中 OSC 133 自动探测与命令切分
- * 3. 第二级: 哨兵 Prompt 注入、正则切分与退出码提取
- * 4. 第三级: 超时自动降级与全屏特征 (1049 备用屏) 独立生效
- * 5. 提示符识别即时触发哨兵注入与全屏状态强制收敛
+ * 3. 第二级: 提示符就绪即时触发哨兵注入与全屏状态收敛
+ * 4. 第三级: 密码认证提示与登录成功后 input_request_end 即时清理
+ * 5. 全屏程序 (如在远程环境中运行 vim) 独立进出
  */
 
 import assert from 'node:assert/strict'
@@ -81,7 +81,7 @@ console.log('🧪 Starting SSH & Nested Shell Boundary Tests...')
   // 远程输出登录横幅和提示符: user@server:~$
   annotator.write('Welcome to server\r\nuser@unmanaged-host:~$ ')
 
-  // 应该立即触发了哨兵注入 (无需等待 4s 超时)
+  // 应该立即触发了哨兵注入 (无需等待超时)
   assert.ok(injectedStdin.includes('export PS1=') || injectedStdin.includes('@@CTI_'))
   
   const tokenMatch = injectedStdin.match(/@@CTI_([0-9a-f]+)_\$?\?@@/)
@@ -107,7 +107,59 @@ console.log('🧪 Starting SSH & Nested Shell Boundary Tests...')
   console.log('    ✓ Prompt detection & fullscreen convergence passed')
 }
 
-// Test 4: 全屏/备用屏在降级模式下的独立性 (在远程真正跑 vim 时仍可切全屏)
+// Test 4: 密码认证与登录成功后 input_request 清理
+{
+  console.log('  Testing Password prompt detection and immediate cleanup upon login...')
+  const events = []
+  let injectedStdin = ''
+  const annotator = new Osc133Annotator((ev) => {
+    events.push(ev)
+    if (ev.kind === 'inject_stdin') {
+      injectedStdin = ev.data
+    }
+  })
+
+  // 1. 发起 SSH
+  annotator.write('\x1b]133;A;/home\x07\x1b]133;B\x07ssh root@192.168.0.105\x1b]133;C\x07')
+  
+  // 2. 远程要求密码
+  annotator.write("root@192.168.0.105's password: ")
+  await new Promise((resolve) => setTimeout(resolve, 700)) // 等待 tick() 触发 input_request
+
+  const req = events.find((e) => e.kind === 'input_request' && e.mode === 'password')
+  assert.ok(req, 'Password input_request should be triggered')
+
+  // 此时绝不能下发哨兵注入！
+  assert.equal(injectedStdin, '', 'Must NOT inject sentinel while awaiting password!')
+
+  // 3. 用户输入密码后登录成功，远程返回 banner 和提示符
+  annotator.write("\r\nLinux Melange 6.17.2-1-pve\r\nLast login: Sun Aug 23 18:44:41\r\nroot@Melange:~# ")
+
+  // 4. 验证 input_request_end 被发出，且哨兵注入被触发
+  const reqEnd = events.find((e) => e.kind === 'input_request_end')
+  assert.ok(reqEnd, 'input_request_end must be emitted as soon as login succeeds')
+
+  assert.ok(injectedStdin.includes('export PS1='), 'Sentinel injection should be triggered after prompt appears')
+
+  // 5. 哨兵生效并执行 ls /
+  const tokenMatch = injectedStdin.match(/@@CTI_([0-9a-f]+)_\$?\?@@/)
+  const token = tokenMatch[1]
+  annotator.write(`\n@@CTI_${token}_0@@\n`)
+
+  // 用户执行 ls /
+  annotator.write(`ls /\nbin  boot  dev  etc  home  lib\n@@CTI_${token}_0@@\n`)
+
+  const lsCmd = events.find((e) => e.kind === 'command_start' && e.text === 'ls /')
+  assert.ok(lsCmd, 'ls / should start as an independent command')
+
+  const lsEnd = events.find((e) => e.kind === 'command_end' && e.commandId === lsCmd.commandId)
+  assert.ok(lsEnd, 'ls / should end properly')
+
+  annotator.close(0)
+  console.log('    ✓ Password prompt flow & input_request cleanup verified')
+}
+
+// Test 5: 全屏/备用屏在降级模式下的独立性 (在远程真正跑 vim 时仍可切全屏)
 {
   console.log('  Testing Fullscreen independence in sentinel mode (vim invocation)...')
   const events = []

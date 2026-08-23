@@ -104,12 +104,17 @@ export function generateSentinelToken(): string {
 
 /**
  * 第二级方案: 哨兵 Prompt 注入语句。
- * 针对 bash / zsh / fish 设定统一标记 @@CTI_<token>_$?@@
+ * 针对 bash / zsh / sh / dash / busybox 设定统一标记 @@CTI_<token>_$?@@。
+ *
+ * ⚠️ 不包含 Fish 分支：Fish 不支持 POSIX if-elif-fi 语法，因此该分支在 Fish
+ * 中根本不会被执行；反而 `function fish_prompt; ...; end` 是 Fish 专有语法，
+ * 在 Bash/Zsh 中会造成语法错误，导致整条注入失败。Fish 远程会话暂不支持哨兵模式。
  */
 export function buildSentinelInjection(token: string): string {
   const marker = `@@CTI_${token}_$?@@`
-  // 注入命令: 兼容 bash / zsh / sh / busybox
-  return `if [ -n "$ZSH_VERSION" ]; then setopt PROMPT_SUBST 2>/dev/null; PROMPT=$'\\n${marker}\\n'; elif [ -n "$FISH_VERSION" ]; then function fish_prompt; printf "\\n@@CTI_${token}_%s@@\\n" $status; end; else export PS1='\\n${marker}\\n'; fi`
+  // zsh: 启用 PROMPT_SUBST 并设置 PROMPT（$? 在提示符展开时求值）
+  // bash/sh/dash/busybox: 设置 PS1（$? 在提示符展开时求值）
+  return `if [ -n "$ZSH_VERSION" ]; then setopt PROMPT_SUBST 2>/dev/null; PROMPT=$'\\n${marker}\\n'; else export PS1='\\n${marker}\\n'; fi`
 }
 
 /** 极简 shell (如 dash/busybox sh) 无法动态求值 PS1 时的命令透明后缀包装 */

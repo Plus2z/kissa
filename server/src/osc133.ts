@@ -39,6 +39,12 @@ const MAX_OUTPUT_CHARS = 200_000
 const INPUT_SILENCE_MS = 600
 const OSC133_RE = /\x1b\]133;(A|B|C|D)(?:;([^\x07\x1b]*))?(?:\x07|\x1b\\)/g
 
+/**
+ * 远程交互式 Shell 提示符特征识别正则:
+ * 覆盖 user@host:~$ / root@host:~# / [user@host dir]$ / hostname% / bash-5.2$ 等
+ */
+const REMOTE_PROMPT_RE = /(?:^|\r|\n)(?:\[?[\w.-]+@[\w.-]+[^\n]*?\]?[#$%>]|\(?[a-zA-Z0-9_.-]+\)?[#$%>]|bash[-0-9.]*[#$%>]) ?(.*)$/
+
 /** 已知 TUI / 全屏程序名单 */
 const TUI_PROGRAMS = new Set([
   'vim', 'nvim', 'vi', 'nano', 'emacs', 'less', 'more', 'most', 'man',
@@ -226,19 +232,16 @@ export class Osc133Annotator {
     this.scanAltScreen(this.buf.slice(scanFrom))
     this.altScanPos = this.buf.length
 
+    // 仅当末尾包含未闭合（被 chunk 截断）的转义序列时，保留未完成的尾部到下轮
     let keep = this.buf.length
-    for (let i = Math.max(handled, this.buf.length - 64); i < this.buf.length; i++) {
-      if (this.buf[i] !== '\x1b') continue
-      if (this.nestedStack.length > 0) {
-        const rest = this.buf.slice(i)
-        if (rest.startsWith('\x1b]133') || rest.startsWith('\x1b[?')) {
-          keep = i
-          break
-        }
-        continue
+    const lastEsc = this.buf.lastIndexOf('\x1b')
+    if (lastEsc >= handled && lastEsc >= this.buf.length - 32) {
+      const rest = this.buf.slice(lastEsc)
+      const isCompleteCsi = /^\x1b\[[0-9;?]*[a-zA-Z~]/.test(rest)
+      const isCompleteOsc = /^\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/.test(rest)
+      if (!isCompleteCsi && !isCompleteOsc) {
+        keep = lastEsc
       }
-      keep = i
-      break
     }
     const tail = this.buf.slice(handled, keep)
     this.routeText(tail)
@@ -323,6 +326,11 @@ export class Osc133Annotator {
           this.lastCwd = param
           this.onEvent({ kind: 'cwd', cwd: param })
         }
+        // 处于提示符准备输入命令时, 收敛退出任何非活动的备用屏状态
+        if (this.altScreen) {
+          this.altScreen = false
+          this.emitFullscreenEdge(true)
+        }
         break
       }
       case 'B':
@@ -404,10 +412,13 @@ export class Osc133Annotator {
           return
         }
         if (top.mode === 'passthrough') {
-          // 透传模式: 汇聚在当前命令气泡中持续输出
           this.outBuf += text
           this.outDirty = true
           this.lastDataAt = Date.now()
+          return
+        }
+        if (top.mode === 'probing') {
+          this.handleProbingOutput(top, text)
           return
         }
       }
@@ -441,19 +452,19 @@ export class Osc133Annotator {
       mismatchCount: 0,
     }
 
-    // 第一级探测: 3 秒内若未收到 OSC 133, 降级至第二级(哨兵注入)
+    // 探测窗口: 4 秒后若仍未升级为 OSC 133 且未收到哨兵, 自动尝试哨兵注入
     frame.probeTimer = setTimeout(() => {
       frame.probeTimer = null
       if (frame.mode === 'probing') {
         this.trySentinelInjection(frame)
       }
-    }, 3000)
+    }, 4000)
     frame.probeTimer.unref?.()
 
     this.nestedStack.push(frame)
     this.onEvent({
       kind: 'boundary_mode',
-      mode: 'osc133', // 探测中先以默认 osc133 展现
+      mode: 'osc133',
       depth: this.nestedStack.length,
       targetName: info.targetName,
     })
@@ -494,7 +505,32 @@ export class Osc133Annotator {
     })
   }
 
+  private handleProbingOutput(frame: NestedFrame, text: string): void {
+    frame.lineBuf += text
+    this.outBuf += text
+    this.outDirty = true
+    this.lastDataAt = Date.now()
+
+    // 检查是否已经落入远程 Shell 提示符
+    const clean = stripAnsi(frame.lineBuf).replace(/\r$/, '')
+    const promptMatch = clean.match(REMOTE_PROMPT_RE)
+    if (promptMatch) {
+      // 成功落入远程 Shell 提示符 -> 立即尝试第二级哨兵注入 (无需盲等 4s 超时)
+      frame.stage = 'idle'
+      // 强制收敛任何残留全屏态
+      if (this.altScreen) {
+        this.altScreen = false
+        this.emitFullscreenEdge(true)
+      }
+      this.trySentinelInjection(frame)
+    }
+  }
+
   private trySentinelInjection(frame: NestedFrame): void {
+    if (frame.probeTimer) {
+      clearTimeout(frame.probeTimer)
+      frame.probeTimer = null
+    }
     frame.mode = 'sentinel'
     this.onEvent({
       kind: 'boundary_mode',
@@ -503,17 +539,17 @@ export class Osc133Annotator {
       targetName: frame.info.targetName,
     })
 
-    // 下发哨兵注入指令到 PTY
+    // 下发哨兵注入指令到 PTY (兼容 bash / zsh / sh / busybox / fish)
     const injectionCmd = buildSentinelInjection(frame.token)
     this.onEvent({ kind: 'inject_stdin', data: ` ${injectionCmd}\n` })
 
-    // 第二级确认窗口 (3秒内未匹配到任何哨兵, 降级至第三级透传)
+    // 第二级确认窗口 (4秒内未匹配到任何哨兵, 降级至第三级透传)
     frame.sentinelTimer = setTimeout(() => {
       frame.sentinelTimer = null
       if (frame.mode === 'sentinel' && frame.stage === 'pre') {
         this.fallbackToPassthrough(frame)
       }
-    }, 3000)
+    }, 4000)
     frame.sentinelTimer.unref?.()
   }
 
@@ -547,13 +583,33 @@ export class Osc133Annotator {
             clearTimeout(frame.sentinelTimer)
             frame.sentinelTimer = null
           }
+          // 进入 idle 时强制收敛全屏状态
+          if (this.altScreen) {
+            this.altScreen = false
+            this.emitFullscreenEdge(true)
+          }
           frame.lineBuf = frame.lineBuf.slice(match.index + match[0].length)
           continue
+        }
+        // 若在 pre 阶段收到常见提示符, 切换为 idle
+        const clean = stripAnsi(frame.lineBuf).replace(/\r$/, '')
+        if (clean.match(REMOTE_PROMPT_RE)) {
+          frame.stage = 'idle'
+          if (this.altScreen) {
+            this.altScreen = false
+            this.emitFullscreenEdge(true)
+          }
         }
         break
       }
 
       if (frame.stage === 'idle') {
+        // 在 idle 阶段收敛全屏态
+        if (this.altScreen) {
+          this.altScreen = false
+          this.emitFullscreenEdge(true)
+        }
+
         const nl = frame.lineBuf.indexOf('\n')
         if (nl < 0) break // 尚未收到完整命令行回显
         const line = stripAnsi(frame.lineBuf.slice(0, nl)).replace(/\r$/, '').trim()
@@ -577,6 +633,11 @@ export class Osc133Annotator {
           frame.outBuf += (frame.outBuf.length > 0 && before.length > 0 ? '\n' : '') + before
           this.endNestedCommand(frame, ec)
           frame.stage = 'idle'
+          // 命令结束回到 idle 时强制退出全屏
+          if (this.altScreen) {
+            this.altScreen = false
+            this.emitFullscreenEdge(true)
+          }
           continue
         } else {
           const lastNl = frame.lineBuf.lastIndexOf('\n')

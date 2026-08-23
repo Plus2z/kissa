@@ -255,11 +255,11 @@ export const useStore = create<AppState>()((set) => ({
 }))
 
 /** 是否有本地命令在跑:最后一个"非远程" output 气泡处于 running。
- *  远程命令气泡(SSH 内,commandId 以 r- 开头)的结束不影响 SSH 会话的运行态 */
+ *  远程命令气泡(SSH 内,commandId 以 r- 或 nest- 开头)的结束不影响 SSH 会话的运行态 */
 export function selectRunning(messages: ChatMessage[]): ChatMessage | undefined {
   const last = [...messages]
     .reverse()
-    .find((m) => m.kind === 'output' && !m.commandId?.startsWith('r-'))
+    .find((m) => m.kind === 'output' && !m.commandId?.startsWith('r-') && !m.commandId?.startsWith('nest-'))
   return last?.status === 'running' ? last : undefined
 }
 

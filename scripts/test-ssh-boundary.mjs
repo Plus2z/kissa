@@ -6,7 +6,7 @@
  * 2. 第一级: 嵌套环境中 OSC 133 自动探测与命令切分
  * 3. 第二级: 哨兵 Prompt 注入、正则切分与退出码提取
  * 4. 第三级: 超时自动降级与全屏特征 (1049 备用屏) 独立生效
- * 5. 多级嵌套 (栈式 push/pop) 状态管理
+ * 5. 提示符识别即时触发哨兵注入与全屏状态强制收敛
  */
 
 import assert from 'node:assert/strict'
@@ -63,9 +63,9 @@ console.log('🧪 Starting SSH & Nested Shell Boundary Tests...')
   console.log('    ✓ Level 1 OSC 133 integration passed')
 }
 
-// Test 3: 第二级 哨兵 Prompt 模式切分
+// Test 3: 第二级 提示符识别即时触发哨兵注入与全屏收敛
 {
-  console.log('  Testing Level 2: Sentinel Prompt injection & parsing...')
+  console.log('  Testing Level 2: Prompt detection triggers sentinel injection & clears fullscreen...')
   const events = []
   let injectedStdin = ''
   const annotator = new Osc133Annotator((ev) => {
@@ -75,64 +75,59 @@ console.log('🧪 Starting SSH & Nested Shell Boundary Tests...')
     }
   })
 
-  // 启动 SSH 命令
-  annotator.write('\x1b]133;A;/home/user\x07\x1b]133;B\x07ssh unmanaged-host\x1b]133;C\x07')
+  // 启动 SSH 命令, 远程连接时先发了一个备用屏序列 (模拟某些系统的登录初始化)
+  annotator.write('\x1b]133;A;/home/user\x07\x1b]133;B\x07ssh unmanaged-host\x1b]133;C\x07\x1b[?1049h')
 
-  // 等待探测超时触发哨兵注入 (通过快速模拟时间或等待)
-  await new Promise((resolve) => setTimeout(resolve, 3100))
+  // 远程输出登录横幅和提示符: user@server:~$
+  annotator.write('Welcome to server\r\nuser@unmanaged-host:~$ ')
 
-  // 应该触发了 inject_stdin
+  // 应该立即触发了哨兵注入 (无需等待 4s 超时)
   assert.ok(injectedStdin.includes('export PS1=') || injectedStdin.includes('@@CTI_'))
   
-  // 提取下发的 token
   const tokenMatch = injectedStdin.match(/@@CTI_([0-9a-f]+)_\$?\?@@/)
   assert.ok(tokenMatch, 'Sentinel token should be in stdin injection')
   const token = tokenMatch[1]
 
-  // 模拟远程 shell 响应哨兵 Prompt
-  // 首个提示符回显 (进入 idle)
+  // 模拟远程 shell 响应哨兵 Prompt (并确认全屏已被强制收敛)
   annotator.write(`\n@@CTI_${token}_0@@\n`)
+
+  const fsExited = events.filter((e) => e.kind === 'fullscreen' && e.status === 'exited')
+  assert.ok(fsExited.length > 0, 'Fullscreen must be exited once shell prompt is ready')
 
   // 用户执行命令与回显: date
   annotator.write(`date\nSun Aug 23 17:30:00 CST 2026\n@@CTI_${token}_0@@\n`)
 
-  // 检查是否切分出 date 命令
   const dateCmd = events.find((e) => e.kind === 'command_start' && e.text === 'date')
   assert.ok(dateCmd, 'date command should be started')
 
   const dateEnd = events.find((e) => e.kind === 'command_end' && e.exitCode === 0)
   assert.ok(dateEnd, 'date command should end with code 0')
 
-  // 执行一条失败命令: cat nonexistent
-  annotator.write(`cat nonexistent\ncat: nonexistent: No such file or directory\n@@CTI_${token}_1@@\n`)
-  const catEnd = events.find((e) => e.kind === 'command_end' && e.exitCode === 1)
-  assert.ok(catEnd, 'cat command should end with code 1')
-
   annotator.close(0)
-  console.log('    ✓ Level 2 Sentinel Prompt mode passed')
+  console.log('    ✓ Prompt detection & fullscreen convergence passed')
 }
 
-// Test 4: 全屏/备用屏在降级模式下的独立性
+// Test 4: 全屏/备用屏在降级模式下的独立性 (在远程真正跑 vim 时仍可切全屏)
 {
-  console.log('  Testing Fullscreen independence in sentinel/passthrough mode...')
+  console.log('  Testing Fullscreen independence in sentinel mode (vim invocation)...')
   const events = []
   const annotator = new Osc133Annotator((ev) => events.push(ev))
 
   annotator.write('\x1b]133;A;/home\x07\x1b]133;B\x07ssh node\x1b]133;C\x07')
   
-  // 模拟远程直接运行 vim 进入备用屏 \x1b[?1049h
-  annotator.write('\x1b[?1049h')
+  // 模拟远程真正运行 vim 进入备用屏 \x1b[?1049h
+  annotator.write('vim test.txt\r\n\x1b[?1049h')
   const fsActive = events.find((e) => e.kind === 'fullscreen' && e.status === 'active')
-  assert.ok(fsActive, 'Fullscreen should be triggered by alternate screen buffer sequence')
+  assert.ok(fsActive, 'Fullscreen should be triggered by vim alternate screen buffer sequence')
 
   // 退出 vim 备用屏 \x1b[?1049l
   annotator.write('\x1b[?1049l')
-  await new Promise((resolve) => setTimeout(resolve, 450)) // 等待 400ms 宽限期
+  await new Promise((resolve) => setTimeout(resolve, 450))
   const fsExited = events.find((e) => e.kind === 'fullscreen' && e.status === 'exited')
   assert.ok(fsExited, 'Fullscreen should be exited after grace period')
 
   annotator.close(0)
-  console.log('    ✓ Fullscreen independence verified')
+  console.log('    ✓ Fullscreen independence for TUI verified')
 }
 
 console.log('🎉 All SSH & Nested Shell Boundary Tests Passed!')

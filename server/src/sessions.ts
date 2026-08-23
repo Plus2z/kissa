@@ -70,6 +70,7 @@ export class Session {
     if (opts.sshTarget) {
       this.sshTarget = opts.sshTarget
       this.pendingSshCommand = buildSshCommand(opts.sshTarget)
+      this.pendingCommandText = this.pendingSshCommand
     }
     this.spawnPty()
   }

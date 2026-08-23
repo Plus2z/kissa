@@ -1,11 +1,11 @@
 /**
- * SSH 连接历史持久化:~/.config/liminal/ssh-hosts.json。
+ * SSH 连接历史持久化:~/.config/kissa/ssh-hosts.json。
  *
  * 记录用户连接过的 SSH 目标(user@host[:port]),按最近使用排序,
  * 供"新建 SSH 连接"弹窗快捷选择。原子写(先临时文件再改名)。
  */
 
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
@@ -17,7 +17,8 @@ export interface SshHost {
   times: number
 }
 
-const FILE = join(homedir(), '.config/liminal/ssh-hosts.json')
+const FILE = join(homedir(), '.config/kissa/ssh-hosts.json')
+const OLD_FILE = join(homedir(), '.config/liminal/ssh-hosts.json')
 
 /** 上限:防文件无限增长 */
 const MAX_HOSTS = 50
@@ -39,7 +40,8 @@ function isValid(v: unknown): v is SshHost {
 
 function read(): SshHost[] {
   try {
-    const raw = JSON.parse(readFileSync(FILE, 'utf8')) as unknown
+    const targetFile = existsSync(FILE) ? FILE : existsSync(OLD_FILE) ? OLD_FILE : FILE
+    const raw = JSON.parse(readFileSync(targetFile, 'utf8')) as unknown
     if (!Array.isArray(raw)) return []
     return raw
       .filter(isValid)

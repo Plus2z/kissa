@@ -14,7 +14,8 @@ import { hydrateSettingsFromServer } from './settings'
 import type { ServerMessage, DangerRule } from './protocol'
 import { apiFetch } from './auth'
 
-const SESSION_KEY = 'liminal.session'
+const SESSION_KEY = 'kissa.session'
+const OLD_SESSION_KEY = 'liminal.session'
 
 /** 已收到的最大 seq(attach 时上报,服务端据此增量补发) */
 let lastSeq = 0
@@ -30,7 +31,7 @@ function saveSessionId(id: string): void {
 }
 function loadSessionId(): string | null {
   try {
-    return localStorage.getItem(SESSION_KEY)
+    return localStorage.getItem(SESSION_KEY) || localStorage.getItem(OLD_SESSION_KEY)
   } catch {
     return null
   }

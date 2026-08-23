@@ -52,7 +52,7 @@ export class Session {
   /** 会话当前目录(cwd 事件驱动),供补全的辅助进程使用 */
   private sessionCwd =
     this.sandboxMode === 'bwrap'
-      ? resolve(process.env.LIMINAL_WORKSPACE ?? process.cwd())
+      ? resolve(process.env.KISSA_WORKSPACE ?? process.env.LIMINAL_WORKSPACE ?? process.cwd())
       : (process.env.HOME ?? process.cwd())
   /** 会话显示名(终端名);空 = 前端回退(本机设备名 / SSH 目标) */
   private name = ''
@@ -168,7 +168,7 @@ export class Session {
     const rows = 24
     const shell = process.env.SHELL && process.env.SHELL.endsWith('bash') ? process.env.SHELL : '/bin/bash'
 
-    this.dir = mkdtempSync(join(tmpdir(), 'liminal-'))
+    this.dir = mkdtempSync(join(tmpdir(), 'kissa-'))
     const rcPath = join(this.dir, 'rcfile.bash')
     writeFileSync(rcPath, RCFILE_TEMPLATE)
 

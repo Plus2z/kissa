@@ -8,7 +8,10 @@ export function authenticatedApiUrl(path: string): string {
 
 export function apiFetch(input: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers)
-  if (token) headers.set('x-liminal-token', token)
+  if (token) {
+    headers.set('x-kissa-token', token)
+    headers.set('x-liminal-token', token)
+  }
   return fetch(input, { ...init, headers })
 }
 

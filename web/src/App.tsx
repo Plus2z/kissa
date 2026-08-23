@@ -40,13 +40,13 @@ export default function App() {
 
   // 程序窗口标题 = 程序名称;终端名(顶栏)= 自定义名 || SSH 目标 || 本机设备名
   useEffect(() => {
-    document.title = 'Liminal'
+    document.title = 'Kissa'
   }, [])
   const termName =
     sessionName ||
     (sshTarget ? (sshTarget.user ? `${sshTarget.user}@${sshTarget.host}` : sshTarget.host) : '') ||
     hostname ||
-    'Liminal'
+    'Kissa'
 
   // 主题应用:'auto' 跟随系统,系统切换时实时响应;气泡配色独立组合
   useEffect(() => {
@@ -71,7 +71,7 @@ export default function App() {
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-line bg-bar px-4">
         <div className="flex min-w-0 items-center gap-3">
           <Avatar cfg={termAvatar} kind="term" className="h-10 w-10" />
-          <h1 className="truncate text-[17px] font-semibold" title={`Liminal · ${termName}`}>
+          <h1 className="truncate text-[17px] font-semibold" title={`Kissa · ${termName}`}>
             {termName}
           </h1>
           <span className={`h-2 w-2 shrink-0 rounded-full ${statusColor}`} title={statusText} />

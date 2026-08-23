@@ -1,4 +1,4 @@
-# ---- liminal shell integration (sourced by bash --rcfile) ----
+# ---- kissa shell integration (sourced by bash --rcfile) ----
 if [ -f ~/.bashrc ]; then . ~/.bashrc; fi
 
 # hook 1(排队首):抢先捕获用户命令的真实退出码。
@@ -21,4 +21,4 @@ PROMPT_COMMAND="__terminal_chat_capture${PROMPT_COMMAND:+;$PROMPT_COMMAND};__ter
 
 # PS0 在命令被接受、执行前展开;框架一般不动它
 PS0=$'\033]133;C\007'
-# ---- end liminal shell integration ----
+# ---- end kissa shell integration ----

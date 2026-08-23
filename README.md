@@ -1,4 +1,4 @@
-# Liminal
+# Kissa
 
 把终端的输入输出映射成聊天气泡。**架构核心原则:以真实终端状态为事实来源(source of truth),分类器/标注只负责选择增强视图;任何增强失败都降级为可用的终端交互。**
 
@@ -20,16 +20,16 @@ Electron 主进程在随机本地端口拉起 Fastify 服务(用 Electron 自带
 
 ```bash
 npm install
-npm run dist:rpm   # 构建 server+web+desktop,产出 desktop/release/Liminal-<版本>.x86_64.rpm
+npm run dist:rpm   # 构建 server+web+desktop,产出 desktop/release/Kissa-<版本>.x86_64.rpm
 ```
 
 用 electron-builder 生成,已声明依赖 `python3` 与 `bash`。安装:
 
 ```bash
-sudo dnf install ./desktop/release/Liminal-0.1.0.x86_64.rpm
+sudo dnf install ./desktop/release/Kissa-0.1.0.x86_64.rpm
 ```
 
-安装后可从应用菜单启动,或命令行运行 `liminal`。若打包环境的 `~/.cache` 只读,需先设
+安装后可从应用菜单启动,或命令行运行 `kissa`。若打包环境的 `~/.cache` 只读,需先设
 `ELECTRON_BUILDER_CACHE` 与 `ELECTRON_CACHE` 到可写目录。
 
 ### Web 版
@@ -48,7 +48,7 @@ npm run dev
 默认只监听 `127.0.0.1`，不启用令牌。若通过反向代理或其他方式暴露 Web 版，必须设置访问令牌：
 
 ```bash
-LIMINAL_AUTH_TOKEN='自行生成的高强度随机令牌' npm start
+KISSA_AUTH_TOKEN='自行生成的高强度随机令牌' npm start
 ```
 
 浏览器以 `http://127.0.0.1:7788/?token=令牌` 打开；令牌会同时用于 API 请求与 WebSocket 握手。桌面版每次启动自动生成并注入一次性令牌，无需手动配置。
@@ -56,7 +56,7 @@ LIMINAL_AUTH_TOKEN='自行生成的高强度随机令牌' npm start
 可选的本机隔离执行使用 Bubblewrap；它会禁用网络、将宿主根目录只读挂载，仅允许指定工作目录和会话临时目录写入：
 
 ```bash
-LIMINAL_SANDBOX=bwrap LIMINAL_WORKSPACE="$PWD" npm start
+KISSA_SANDBOX=bwrap KISSA_WORKSPACE="$PWD" npm start
 ```
 
 该模式要求系统已安装 `bwrap`，且内核/系统策略允许用户命名空间。隔离启动失败时会直接结束该会话，不会回退为宿主机执行。
@@ -66,6 +66,7 @@ LIMINAL_SANDBOX=bwrap LIMINAL_WORKSPACE="$PWD" npm start
 ```bash
 # 先启动服务(或桌面版,从日志/ss 找内部端口),然后:
 npm run test:ws      # WS 协议端到端:命令边界/退出码/cwd/Ctrl+C/resize/真相层
+npm run test:ssh     # SSH / 嵌套 Shell 边界识别与状态机测试
 ```
 
 ## 架构(阶段一)
@@ -92,7 +93,7 @@ desktop(Electron)              独立桌面应用:主进程在随机本地端口
 数据流主干:`PTY 原始字节 → WS raw 消息(base64) → 前端真相层`,永不过滤、永不改写;
 结构化标注事件走旁路,坏了只是少个气泡,顶部的“终端视图”按钮随时可以退回完整终端。
 
-## 已实现(阶段一至阶段三)
+## 已实现(阶段一至阶段五)
 
 ### 阶段一(MVP)
 - 命令气泡(右对齐、显示 cwd 与时间)+ 输出气泡(等宽、超 30 行头尾保留折叠中间)
@@ -128,16 +129,12 @@ desktop(Electron)              独立桌面应用:主进程在随机本地端口
 
 ### 阶段四(安全与多会话)
 - **多会话**:会话面板可新建、切换与关闭独立 PTY 会话；断线的会话仍按既有 30 分钟策略保活
-- **鉴权**:配置 `LIMINAL_AUTH_TOKEN` 后，API 与 WebSocket 必须携带令牌；桌面版自动使用一次性随机令牌
-- **容器隔离**:可显式启用 `LIMINAL_SANDBOX=bwrap`，以用户命名空间隔离会话、禁用网络并限制可写目录
+- **鉴权**:配置 `KISSA_AUTH_TOKEN` 后，API 与 WebSocket 必须携带令牌；桌面版自动使用一次性随机令牌
+- **容器隔离**:可显式启用 `KISSA_SANDBOX=bwrap`，以用户命名空间隔离会话、禁用网络并限制可写目录
 
 ### 阶段五(会话身份与 SSH)
 - **会话重命名**:会话面板内可重命名终端(✎)，名称显示在顶栏与会话面板；空名恢复默认
-- **窗口标题与终端名**:程序窗口标题固定为 `Liminal`；顶栏显示终端名——本地会话取本机设备名，SSH 会话取目标设备名(解析 `ssh user@host`，支持 `-p` 端口与 `-i`/`-J` 等选项)
-- **SSH 一等公民**:会话面板提供「🔗 SSH」新建连接入口，输入 `user@host[:port]` 即建会话并自动执行 ssh；连接历史(user@host、端口、次数)持久化到 `~/.config/liminal/ssh-hosts.json`，新建弹窗内可快捷复用或删除
+- **窗口标题与终端名**:程序窗口标题固定为 `Kissa`；顶栏显示终端名——本地会话取本机设备名，SSH 会话取目标设备名(解析 `ssh user@host`，支持 `-p` 端口与 `-i`/`-J` 等选项)
+- **SSH 一等公民**:会话面板提供「🔗 SSH」新建连接入口，输入 `user@host[:port]` 即建会话并自动执行 ssh；连接历史(user@host、端口、次数)持久化到 `~/.config/kissa/ssh-hosts.json`，新建弹窗内可快捷复用或删除
 - **SSH 对话视图操作**:ssh/mosh 不再全屏锁定，直接在对话流中操作——远程提示符(`user@host:~$`)被识别切分成独立的远程命令/输出气泡，密码与指纹确认走气泡内输入组件；顶栏终端名在 SSH 期间切换为目标设备；远程 TUI(如远程 vim)仍会经备用屏检测自动切入终端视图
 - **sudo 命令补全**:Tab 补全支持 `sudo`/`env`/`nohup` 等前缀后的命令位识别(`sudo apt<Tab>`、`sudo -u root systemctl<Tab>`)，不再误当文件补全
-
-## 未实现(按路线图)
-
-- 暂无；后续可扩展远程身份提供方、容器镜像策略与跨设备会话持久化

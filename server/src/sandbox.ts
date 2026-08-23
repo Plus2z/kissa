@@ -3,9 +3,9 @@ import { existsSync } from 'node:fs'
 export type SandboxMode = 'none' | 'bwrap'
 
 export function sandboxModeFromEnv(): SandboxMode {
-  const mode = process.env.LIMINAL_SANDBOX ?? 'none'
+  const mode = process.env.KISSA_SANDBOX ?? process.env.LIMINAL_SANDBOX ?? 'none'
   if (mode === 'none' || mode === 'bwrap') return mode
-  throw new Error('LIMINAL_SANDBOX 仅支持 none 或 bwrap')
+  throw new Error('KISSA_SANDBOX 仅支持 none 或 bwrap')
 }
 
 export function bwrapAvailable(): boolean {

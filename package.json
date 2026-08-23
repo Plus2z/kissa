@@ -1,8 +1,8 @@
 {
-  "name": "liminal",
+  "name": "kissa",
   "version": "0.1.0",
   "private": true,
-  "description": "Liminal —— 以真实终端状态为事实来源,聊天气泡只是增强视图",
+  "description": "Kissa —— 以真实终端状态为事实来源,聊天气泡只是增强视图",
   "type": "module",
   "workspaces": [
     "server",

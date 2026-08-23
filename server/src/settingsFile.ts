@@ -1,16 +1,17 @@
 /**
- * 用户设置的服务端持久化:~/.config/liminal/settings.json。
+ * 用户设置的服务端持久化:~/.config/kissa/settings.json。
  *
  * 为什么不用 localStorage 就够了:桌面版每次启动用随机端口,端口一变
  * origin 就变,localStorage 随之丢失(头像每次都要重设的根因)。
  * 设置落到磁盘文件,通过 /api/settings 读写,与端口无关。
  */
 
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
-const FILE = join(homedir(), '.config/liminal/settings.json')
+const FILE = join(homedir(), '.config/kissa/settings.json')
+const OLD_FILE = join(homedir(), '.config/liminal/settings.json')
 
 export interface StoredSettings {
   theme?: string
@@ -52,7 +53,8 @@ function sanitize(raw: unknown): StoredSettings {
 
 export function readSettings(): StoredSettings {
   try {
-    return sanitize(JSON.parse(readFileSync(FILE, 'utf8')))
+    const targetFile = existsSync(FILE) ? FILE : existsSync(OLD_FILE) ? OLD_FILE : FILE
+    return sanitize(JSON.parse(readFileSync(targetFile, 'utf8')))
   } catch {
     return {} // 首次使用或文件损坏:走默认值
   }

@@ -1,5 +1,5 @@
 /**
- * Liminal · 桌面版主进程。
+ * Kissa · 桌面版主进程。
  *
  * 结构:Electron 主进程 = 外壳;Fastify 服务作为子进程跑在随机本地端口,
  * 窗口加载该地址。服务进程用 Electron 自带的 Node 运行(ELECTRON_RUN_AS_NODE),
@@ -45,6 +45,7 @@ function startServer(port: number): void {
       ELECTRON_RUN_AS_NODE: '1',
       PORT: String(port),
       HOST: '127.0.0.1',
+      KISSA_AUTH_TOKEN: authToken,
       LIMINAL_AUTH_TOKEN: authToken,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -103,7 +104,7 @@ async function createWindow(): Promise<void> {
     minHeight: 400,
     backgroundColor: '#faf9f9',
     autoHideMenuBar: true,
-    title: 'Liminal',
+    title: 'Kissa',
     icon: APP_ICON,
     show: false,
   })
@@ -118,7 +119,7 @@ async function createWindow(): Promise<void> {
   await win.loadURL(`http://127.0.0.1:${serverPort}/?token=${encodeURIComponent(authToken)}`)
 }
 
-app.setName('Liminal')
+app.setName('Kissa')
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()

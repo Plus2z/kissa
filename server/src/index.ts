@@ -1,5 +1,5 @@
 /**
- * liminal 服务端入口。
+ * kissa 服务端入口。
  *
  * - /ws:连接后客户端发 attach 续接会话(或隐式新建);断线后会话保活 30 分钟
  * - /api/settings、/api/danger-rules、/api/user-avatar
@@ -31,13 +31,13 @@ const webDist = join(__dirname, '../../web/dist')
 const app = Fastify({ logger: { level: 'info' } })
 await app.register(websocket)
 
-const AUTH_TOKEN = process.env.LIMINAL_AUTH_TOKEN ?? ''
+const AUTH_TOKEN = process.env.KISSA_AUTH_TOKEN ?? process.env.LIMINAL_AUTH_TOKEN ?? ''
 
 function requestToken(request: { headers: Record<string, string | string[] | undefined>; raw: { url?: string } }): string {
-  const header = request.headers['x-liminal-token']
+  const header = request.headers['x-kissa-token'] ?? request.headers['x-liminal-token']
   if (typeof header === 'string') return header
   try {
-    return new URL(request.raw.url ?? '/', 'http://liminal.local').searchParams.get('token') ?? ''
+    return new URL(request.raw.url ?? '/', 'http://kissa.local').searchParams.get('token') ?? ''
   } catch {
     return ''
   }
@@ -276,5 +276,5 @@ process.on('SIGINT', () => {
 })
 
 app.listen({ port: PORT, host: HOST }).then(() => {
-  app.log.info(`liminal server listening on ws://${HOST}:${PORT}/ws`)
+  app.log.info(`kissa server listening on ws://${HOST}:${PORT}/ws`)
 })

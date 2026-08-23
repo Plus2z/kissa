@@ -1,10 +1,10 @@
 {
-  "name": "@liminal/desktop",
+  "name": "@kissa/desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "Liminal 桌面版(Electron)",
-  "author": "Liminal",
-  "homepage": "https://github.com/liminal-chat/liminal",
+  "description": "Kissa 桌面版(Electron)",
+  "author": "Kissa",
+  "homepage": "https://github.com/kissa-chat/kissa",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -18,8 +18,8 @@
     "typescript": "^5.7.3"
   },
   "build": {
-    "appId": "com.liminal.app",
-    "productName": "Liminal",
+    "appId": "com.kissa.app",
+    "productName": "Kissa",
     "directories": {
       "output": "release"
     },
@@ -40,9 +40,9 @@
       "target": ["rpm"],
       "category": "Development",
       "icon": "icons/icon-512.png",
-      "executableName": "liminal",
-      "maintainer": "Liminal",
-      "synopsis": "Liminal —— 以真实终端状态为事实来源的对话式终端",
+      "executableName": "kissa",
+      "maintainer": "Kissa",
+      "synopsis": "Kissa —— 以真实终端状态为事实来源的对话式终端",
       "description": "把终端的输入输出映射成聊天气泡的桌面终端应用"
     },
     "rpm": {

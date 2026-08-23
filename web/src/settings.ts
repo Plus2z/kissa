@@ -34,7 +34,8 @@ export interface SettingsState {
   setSysAvatarAvailable: (v: boolean) => void
 }
 
-const KEY = 'liminal.settings'
+const KEY = 'kissa.settings'
+const OLD_KEY = 'liminal.settings'
 const DEFAULTS = {
   theme: 'light' as ThemeMode,
   bubbleTheme: 'wechat' as BubbleTheme,
@@ -45,7 +46,7 @@ const DEFAULTS = {
 
 function load(): typeof DEFAULTS {
   try {
-    const raw = localStorage.getItem(KEY)
+    const raw = localStorage.getItem(KEY) || localStorage.getItem(OLD_KEY)
     if (!raw) return { ...DEFAULTS }
     const parsed = JSON.parse(raw) as Partial<typeof DEFAULTS>
     return {

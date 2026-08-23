@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""liminal PTY 桥。
+"""Kissa PTY 桥。
 
 给 Node 服务提供无原生编译依赖的 PTY 能力(替代 node-pty,语义对齐):
 

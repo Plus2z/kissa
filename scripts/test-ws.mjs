@@ -9,8 +9,8 @@ import { parseSshTarget } from '../server/dist/ssh.js'
 import { Osc133Annotator } from '../server/dist/osc133.js'
 
 const URL = process.env.WS_URL ?? 'ws://127.0.0.1:7788/ws'
-const AUTH_TOKEN = process.env.LIMINAL_AUTH_TOKEN ?? ''
-const WS_OPTIONS = AUTH_TOKEN ? { headers: { 'x-liminal-token': AUTH_TOKEN } } : undefined
+const AUTH_TOKEN = process.env.KISSA_AUTH_TOKEN ?? process.env.LIMINAL_AUTH_TOKEN ?? ''
+const WS_OPTIONS = AUTH_TOKEN ? { headers: { 'x-kissa-token': AUTH_TOKEN, 'x-liminal-token': AUTH_TOKEN } } : undefined
 const API_BASE = (process.env.API_URL ?? URL).replace(/^ws/, 'http').replace(/\/ws(?:\?.*)?$/, '')
 const ws = new WebSocket(URL, WS_OPTIONS)
 ws.binaryType = 'nodebuffer'
@@ -60,7 +60,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 async function api(path, init = {}) {
   const headers = new Headers(init.headers)
-  if (AUTH_TOKEN) headers.set('x-liminal-token', AUTH_TOKEN)
+  if (AUTH_TOKEN) {
+    headers.set('x-kissa-token', AUTH_TOKEN)
+    headers.set('x-liminal-token', AUTH_TOKEN)
+  }
   return fetch(`${API_BASE}${path}`, { ...init, headers })
 }
 

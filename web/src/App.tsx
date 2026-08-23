@@ -23,6 +23,9 @@ export default function App() {
   const fontSize = useSettings((s) => s.fontSize)
   const termAvatar = useSettings((s) => s.termAvatar)
   const fullscreen = useStore((s) => s.fullscreen)
+  const boundaryMode = useStore((s) => s.boundaryMode)
+  const boundaryDepth = useStore((s) => s.boundaryDepth)
+  const nestedTargetName = useStore((s) => s.nestedTargetName)
 
   useEffect(() => {
     net.connect()
@@ -72,6 +75,20 @@ export default function App() {
             {termName}
           </h1>
           <span className={`h-2 w-2 shrink-0 rounded-full ${statusColor}`} title={statusText} />
+          {boundaryDepth > 0 && (
+            <span
+              className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                boundaryMode === 'osc133'
+                  ? 'bg-brand-bg text-brand-deep'
+                  : boundaryMode === 'sentinel'
+                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
+                  : 'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300'
+              }`}
+              title={`嵌套环境: ${nestedTargetName || 'Shell'} | 模式: ${boundaryMode}`}
+            >
+              {boundaryMode === 'osc133' ? '🎯 OSC133' : boundaryMode === 'sentinel' ? '⚡ 哨兵' : '🛡️ 兼容'}
+            </span>
+          )}
         </div>
         <div className="ml-auto flex items-center gap-2">
           <span className="font-mono-term hidden max-w-[280px] truncate text-xs text-ink-2 sm:block" title={cwd}>

@@ -49,6 +49,10 @@ interface AppState {
   sessionName: string
   /** 当前 SSH 连接目标(终端名 = 目标设备) */
   sshTarget: SshTarget | null
+  /** 当前边界识别模式 */
+  boundaryMode: 'osc133' | 'sentinel' | 'passthrough'
+  boundaryDepth: number
+  nestedTargetName: string | null
   messages: ChatMessage[]
   /** 全屏程序状态(备用屏缓冲区) */
   fullscreen: { active: boolean; commandId: string | null }
@@ -68,6 +72,9 @@ export const useStore = create<AppState>()((set) => ({
   hostname: '',
   sessionName: '',
   sshTarget: null,
+  boundaryMode: 'osc133',
+  boundaryDepth: 0,
+  nestedTargetName: null,
   messages: [],
   fullscreen: { active: false, commandId: null },
   inputRequest: null,
@@ -97,6 +104,32 @@ export const useStore = create<AppState>()((set) => ({
             ...s.messages,
             { id: `ssh-${Date.now()}-${s.messages.length}`, kind: 'system', ts: Date.now(), text },
           ],
+        }))
+        break
+      }
+      case 'boundary_mode': {
+        const modeLabel =
+          msg.mode === 'osc133'
+            ? '🎯 高精度 Shell 集成 (OSC 133)'
+            : msg.mode === 'sentinel'
+            ? '⚡ 哨兵兼容模式'
+            : '🛡️ 兼容透传模式 (整段流式展示)'
+        set((s) => ({
+          boundaryMode: msg.mode,
+          boundaryDepth: msg.depth,
+          nestedTargetName: msg.targetName ?? null,
+          messages:
+            msg.depth > 0
+              ? [
+                  ...s.messages,
+                  {
+                    id: `bmode-${Date.now()}-${s.messages.length}`,
+                    kind: 'system',
+                    ts: Date.now(),
+                    text: `[${msg.targetName || '嵌套环境'}] 边界模式: ${modeLabel}`,
+                  },
+                ]
+              : s.messages,
         }))
         break
       }
@@ -208,6 +241,9 @@ export const useStore = create<AppState>()((set) => ({
       hostname: '',
       sessionName: '',
       sshTarget: null,
+      boundaryMode: 'osc133',
+      boundaryDepth: 0,
+      nestedTargetName: null,
       fullscreen: { active: false, commandId: null },
       inputRequest: null,
     }),

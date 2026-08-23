@@ -233,6 +233,17 @@ export class Session {
               data: ev.data,
             })
             break
+          case 'boundary_mode':
+            this.send({
+              type: 'boundary_mode',
+              mode: ev.mode,
+              depth: ev.depth,
+              targetName: ev.targetName,
+            })
+            break
+          case 'inject_stdin':
+            this.pty.write(ev.data)
+            break
         }
       },
       () => {

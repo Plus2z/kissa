@@ -30,6 +30,7 @@ export type ServerMessage =
   | { type: 'replay'; raw: string; events: Array<ServerMessage & { seq: number }> }
   | { type: 'cwd'; cwd: string }
   | { type: 'ssh_target'; target: SshTarget | null }
+  | { type: 'boundary_mode'; mode: 'osc133' | 'sentinel' | 'passthrough'; depth: number; targetName?: string }
   | { type: 'system'; text: string }
   | { type: 'error'; text: string }
 

@@ -44,5 +44,7 @@ export type ServerMessage =
   | { type: 'cwd'; cwd: string }
   /** 会话检测到 SSH 连接(终端名 = 目标设备);target 为空表示 SSH 已退出 */
   | { type: 'ssh_target'; target: { user: string; host: string; port: number } | null }
+  /** 会话边界识别模式通知(三级降级状态): osc133 | sentinel | passthrough, depth 为嵌套层级(0 为本地) */
+  | { type: 'boundary_mode'; mode: 'osc133' | 'sentinel' | 'passthrough'; depth: number; targetName?: string }
   | { type: 'system'; text: string }
   | { type: 'error'; text: string }

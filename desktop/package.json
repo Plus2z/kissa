@@ -1,0 +1,53 @@
+{
+  "name": "@liminal/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Liminal 桌面版(Electron)",
+  "author": "Liminal",
+  "homepage": "https://github.com/liminal-chat/liminal",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "electron .",
+    "dist:rpm": "ELECTRON_BUILDER_CACHE=\"$(pwd)/../.eb-cache\" ELECTRON_CACHE=\"$(pwd)/../.electron-cache\" electron-builder --linux rpm"
+  },
+  "devDependencies": {
+    "electron": "33.4.11",
+    "electron-builder": "^26.0.12",
+    "typescript": "^5.7.3"
+  },
+  "build": {
+    "appId": "com.liminal.app",
+    "productName": "Liminal",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      { "from": "../server/package.json", "to": "server/package.json" },
+      { "from": "../server/dist", "to": "server/dist" },
+      { "from": "../server/shell", "to": "server/shell" },
+      { "from": "../server/bin", "to": "server/bin" },
+      { "from": "../server/node_modules", "to": "server/node_modules" },
+      { "from": "../web/dist", "to": "web/dist" },
+      { "from": "icons", "to": "icons" }
+    ],
+    "linux": {
+      "target": ["rpm"],
+      "category": "Development",
+      "icon": "icons/icon-512.png",
+      "executableName": "liminal",
+      "maintainer": "Liminal",
+      "synopsis": "Liminal —— 以真实终端状态为事实来源的对话式终端",
+      "description": "把终端的输入输出映射成聊天气泡的桌面终端应用"
+    },
+    "rpm": {
+      "depends": ["python3", "bash"],
+      "artifactName": "${productName}-${version}.${arch}.rpm"
+    }
+  }
+}

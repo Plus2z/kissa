@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+
+# electron-builder 打包产物与缓存
+desktop/release/
+.eb-cache/
+.electron-cache/
+
+# 打包准备的临时目录
+.server-deps/
+.npm-cache/
+.gui-test/
+.test-home/

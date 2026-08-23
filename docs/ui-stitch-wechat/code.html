@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Chat Detail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed-variant": "#474746",
+                    "secondary-fixed": "#e2e2e2",
+                    "primary": "#006d33",
+                    "primary-fixed-dim": "#45e17c",
+                    "on-tertiary-container": "#3d3d3c",
+                    "surface-container-high": "#e9e8e8",
+                    "on-error": "#ffffff",
+                    "secondary-fixed-dim": "#c6c6c7",
+                    "surface-tint": "#006d33",
+                    "on-tertiary": "#ffffff",
+                    "on-background": "#1b1c1c",
+                    "secondary": "#5d5f5f",
+                    "tertiary-fixed": "#e5e2e1",
+                    "on-surface-variant": "#3d4a3d",
+                    "tertiary-container": "#a9a7a7",
+                    "surface-bright": "#faf9f9",
+                    "on-surface": "#1b1c1c",
+                    "on-secondary": "#ffffff",
+                    "outline": "#6c7b6c",
+                    "tertiary": "#5f5e5e",
+                    "inverse-surface": "#303031",
+                    "on-tertiary-fixed": "#1c1b1b",
+                    "on-primary": "#ffffff",
+                    "surface-container": "#efeded",
+                    "on-secondary-fixed-variant": "#454747",
+                    "inverse-on-surface": "#f2f0f0",
+                    "error": "#ba1a1a",
+                    "background": "#faf9f9",
+                    "surface-variant": "#e3e2e2",
+                    "tertiary-fixed-dim": "#c8c6c5",
+                    "primary-container": "#07c160",
+                    "surface-container-low": "#f5f3f3",
+                    "primary-fixed": "#66ff95",
+                    "outline-variant": "#bbcbba",
+                    "inverse-primary": "#45e17c",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed": "#00210b",
+                    "secondary-container": "#dcdddd",
+                    "on-secondary-fixed": "#1a1c1c",
+                    "on-primary-container": "#00471f",
+                    "surface": "#faf9f9",
+                    "error-container": "#ffdad6",
+                    "on-error-container": "#93000a",
+                    "on-secondary-container": "#5f6161",
+                    "surface-container-highest": "#e3e2e2",
+                    "on-primary-fixed-variant": "#005225",
+                    "surface-dim": "#dbdad9"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-page": "16px",
+                    "unit": "4px",
+                    "stack-md": "16px",
+                    "stack-sm": "8px",
+                    "padding-card": "16px",
+                    "gutter-list": "12px"
+            },
+            "fontFamily": {
+                    "body-md": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "display-lg-mobile": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "label-sm": ["Inter"]
+            },
+            "fontSize": {
+                    "body-md": ["15px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-md": ["17px", {"lineHeight": "22px", "fontWeight": "600"}],
+                    "display-lg-mobile": ["20px", {"lineHeight": "26px", "fontWeight": "600"}],
+                    "body-lg": ["17px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "display-lg": ["22px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.2px", "fontWeight": "400"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body class="bg-surface-variant text-on-surface font-body-md min-h-screen flex items-center justify-center antialiased p-4 sm:p-8">
+<!-- Desktop Application Window -->
+<main class="w-full max-w-[1024px] aspect-[4/3] bg-surface-container-lowest rounded-xl shadow-2xl flex flex-col overflow-hidden border border-surface-variant border-opacity-50">
+<!-- Title Bar -->
+<header class="h-14 bg-surface-container-low border-b border-surface-variant flex items-center justify-between px-4 shrink-0 drag-handle cursor-default select-none">
+<!-- Window Controls (Mac style mock) -->
+<div class="flex items-center gap-2 w-20">
+<div class="w-3 h-3 rounded-full bg-[#FF5F56] border border-[#E0443E]"></div>
+<div class="w-3 h-3 rounded-full bg-[#FFBD2E] border border-[#DEA123]"></div>
+<div class="w-3 h-3 rounded-full bg-[#27C93F] border border-[#1AAB29]"></div>
+</div>
+<!-- Title -->
+<div class="flex items-center gap-3">
+<img alt="Sarah" class="w-8 h-8 rounded-full object-cover shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZBUkM9Drzo1YVRW0aUFgjd2SBtOo37dUIvnYmlD4_wMx4HLQUBM5r79legNK01vqI9BU5rj8v5t3WSN-OtR5lvwyPKIfdSocKJB5jRzduR4f_qY_zsKdTbfIi4Gg_TSUlWk36lwZDb8q_3r7yNbwcAJpkDiM0ZVYKwiSFMFOxMUqVLTKAT7EsTHZgiTPrYg2EI4fRjfuv8f0G3a9UZZYmvn_3u8sgxszF_4t_lUUbo2DaxwM28uGchURpCJABwP5X5thmGeMh5mw"/>
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface">Sarah</h1>
+<div class="w-2 h-2 rounded-full bg-primary-container ml-1"></div>
+</div>
+<!-- Actions -->
+<div class="flex items-center gap-2 w-20 justify-end text-secondary">
+<button class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-xl">search</span>
+</button>
+<button class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-xl">more_vert</span>
+</button>
+</div>
+</header>
+<!-- Chat Canvas -->
+<section class="flex-1 overflow-y-auto px-6 py-6 bg-[#F7F7F7] flex flex-col gap-6 scroll-smooth" id="chat-canvas">
+<!-- Timestamp -->
+<div class="flex justify-center mb-2">
+<span class="text-label-sm font-label-sm text-secondary bg-surface-variant/50 px-3 py-1 rounded-full shadow-sm">Today 14:30</span>
+</div>
+<!-- Receiver Message (Sarah) -->
+<div class="flex w-full items-end gap-3 max-w-2xl">
+<img alt="Sarah" class="w-10 h-10 rounded-full object-cover flex-shrink-0 shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZBUkM9Drzo1YVRW0aUFgjd2SBtOo37dUIvnYmlD4_wMx4HLQUBM5r79legNK01vqI9BU5rj8v5t3WSN-OtR5lvwyPKIfdSocKJB5jRzduR4f_qY_zsKdTbfIi4Gg_TSUlWk36lwZDb8q_3r7yNbwcAJpkDiM0ZVYKwiSFMFOxMUqVLTKAT7EsTHZgiTPrYg2EI4fRjfuv8f0G3a9UZZYmvn_3u8sgxszF_4t_lUUbo2DaxwM28uGchURpCJABwP5X5thmGeMh5mw"/>
+<div class="bg-surface-container-lowest text-on-surface p-4 rounded-2xl rounded-bl-sm shadow-sm border border-surface-variant/40">
+<p class="font-body-lg text-body-lg">Are you coming?</p>
+</div>
+</div>
+<!-- Sender Message (Me) -->
+<div class="flex w-full justify-end items-end gap-3 max-w-2xl ml-auto">
+<div class="bg-primary-container text-on-primary-container p-4 rounded-2xl rounded-br-sm shadow-sm">
+<p class="font-body-lg text-body-lg">On my way! 🏃‍♂️</p>
+</div>
+</div>
+<!-- Receiver Message (Sarah) -->
+<div class="flex w-full items-end gap-3 max-w-2xl">
+<img alt="Sarah" class="w-10 h-10 rounded-full object-cover flex-shrink-0 shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUiB1XFP_TvONyAGj8ouZi_oj6AXTBNNb2R2SZsS_kofa9lIVLAT4beOAAiuGFwfuFBpqh3qKwVDDyiDgzFzsBjHc3oBaKMI2NQsmDQzlkAywF5xfDF2LrWoWMvJlUXlnohQgiNof-cPlM0jWKvS4KBvqO2Vc_RerGGZ_RjRp47mkuOuOpQUCud_QsyHjL-dl3EkLcGjAZj7s8sChPFvljy9DsgmhIX3Xn0__gWqffAo8tsSazuv_BMgA6S9_IrFrtteWHXbbX3jI"/>
+<div class="bg-surface-container-lowest text-on-surface p-4 rounded-2xl rounded-bl-sm shadow-sm border border-surface-variant/40">
+<p class="font-body-lg text-body-lg">Great, see you soon!</p>
+</div>
+</div>
+</section>
+<!-- Input Area Desktop -->
+<footer class="bg-surface-container-lowest border-t border-surface-variant p-4 shrink-0">
+<div class="flex items-end gap-3 max-w-4xl mx-auto">
+<!-- Left Actions -->
+<div class="flex items-center gap-1 pb-2">
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:bg-surface-variant hover:text-on-surface transition-colors" title="Attach file">
+<span class="material-symbols-outlined">attach_file</span>
+</button>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-secondary hover:bg-surface-variant hover:text-on-surface transition-colors hidden sm:flex" title="Emoji">
+<span class="material-symbols-outlined">sentiment_satisfied</span>
+</button>
+</div>
+<!-- Input Box -->
+<div class="flex-1 bg-[#F7F7F7] border border-surface-variant rounded-xl flex items-end px-4 py-3 focus-within:border-primary-container focus-within:ring-1 focus-within:ring-primary-container transition-all shadow-sm inset-shadow-sm min-h-[50px]">
+<textarea class="w-full bg-transparent border-none focus:ring-0 text-body-lg font-body-lg text-on-surface placeholder:text-secondary p-0 resize-none max-h-32 overflow-y-auto" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'" placeholder="Type a message..." rows="1" style="min-height: 24px;"></textarea>
+</div>
+<!-- Right Actions -->
+<div class="flex items-center gap-2 pb-1.5">
+<button class="w-11 h-11 rounded-full flex items-center justify-center text-secondary hover:bg-surface-variant hover:text-on-surface transition-colors" title="Voice message">
+<span class="material-symbols-outlined">mic</span>
+</button>
+<button class="w-11 h-11 rounded-full bg-primary-container text-on-primary-container hover:bg-[#06b057] flex items-center justify-center shadow-sm transition-colors transform active:scale-95" title="Send message">
+<span class="material-symbols-outlined ml-1" data-weight="fill">send</span>
+</button>
+</div>
+</div>
+</footer>
+</main>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('chat-canvas');
+        canvas.scrollTop = canvas.scrollHeight;
+    });
+</script>
+</body></html>

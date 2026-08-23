@@ -1,0 +1,27 @@
+{
+  "name": "liminal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Liminal —— 以真实终端状态为事实来源,聊天气泡只是增强视图",
+  "type": "module",
+  "workspaces": [
+    "server",
+    "web",
+    "desktop"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,green \"npm:dev -w server\" \"npm:dev -w web\"",
+    "build": "npm run build -w server && npm run build -w web && npm run build -w desktop",
+    "start": "npm run start -w server",
+    "desktop": "npm run build && npm run start -w desktop",
+    "test:ws": "node scripts/test-ws.mjs",
+    "prepare:server-deps": "bash scripts/prepare-server-deps.sh",
+    "dist:rpm": "npm run build && npm run prepare:server-deps && npm run dist:rpm -w desktop"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "allowScripts": {
+    "electron@33.4.11": true
+  }
+}

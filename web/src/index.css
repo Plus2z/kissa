@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+/*
+ * 微信风格主题(来自 stitch_wechat_ui_clone 设计稿)
+ * 色调分层:canvas 灰 → 容器白 → 发丝线分隔,不依赖阴影
+ * 暗色模式:html[data-theme="dark"] 覆盖同一组令牌,组件层零改动
+ */
+@theme {
+  --color-canvas: #f7f7f7; /* 聊天画布 */
+  --color-surface: #faf9f9; /* 全局底色 */
+  --color-bar: #f5f3f3; /* 顶栏容器 */
+  --color-panel: #ffffff; /* 白色容器(气泡/底栏/弹窗) */
+  --color-line: #e6e6e6; /* 发丝线 */
+  --color-ink: #191919; /* 主文本 */
+  --color-ink-2: #808080; /* 次要文本(时间/描述/占位) */
+  --color-brand: #07c160; /* 微信绿(主操作/发送气泡) */
+  --color-brand-ink: #00471f; /* 绿泡上的深绿文本 */
+  --color-brand-deep: #006d33; /* 深绿(状态/激活) */
+  --color-brand-bg: #e7f7ee; /* 选中态淡绿 */
+  --color-danger: #ba1a1a;
+  --color-danger-bg: #ffdad6;
+  --color-danger-ink: #93000a;
+  /* 气泡专用令牌(随 data-bubbles 风格切换) */
+  --color-bubble-out: #07c160; /* 发送方(命令)气泡底色 */
+  --color-bubble-out-ink: #ffffff; /* 发送方气泡文本 */
+  --color-bubble-in: #ffffff; /* 接收方(输出)气泡底色 */
+  --color-bubble-in-ink: #191919; /* 接收方气泡文本 */
+}
+
+html[data-theme='dark'] {
+  --color-canvas: #101318;
+  --color-surface: #0d1015;
+  --color-bar: #151a21;
+  --color-panel: #1b212a;
+  --color-line: #2a303b;
+  --color-ink: #d7dbe2;
+  --color-ink-2: #8b93a1;
+  --color-brand-deep: #3fd47f;
+  --color-brand-bg: #143126;
+  --color-danger: #ff7a7a;
+  --color-danger-bg: #3b1f22;
+  --color-danger-ink: #ffb3b3;
+  --color-bubble-out-ink: #ffffff;
+  --color-bubble-in: #1b212a;
+  --color-bubble-in-ink: #d7dbe2;
+}
+
+/*
+ * 气泡配色风格(html[data-bubbles]),与浅/深外观正交组合。
+ * 同时联动强调色(brand 三兄弟:发送钮/状态/选中)与画布底色。
+ */
+/* 微信(默认):浅 = 现行配色;深 = 深色面板 + 微信绿 */
+html[data-bubbles='wechat'][data-theme='dark'] {
+  --color-bubble-out: #07c160;
+  --color-bubble-out-ink: #ffffff;
+}
+
+/* WhatsApp:米色画布、淡绿发送泡、品牌绿强调 */
+html[data-bubbles='whatsapp'] {
+  --color-canvas: #efeae2;
+  --color-brand: #00a884;
+  --color-brand-deep: #008069;
+  --color-brand-bg: #d7f2ea;
+  --color-bubble-out: #d9fdd3;
+  --color-bubble-out-ink: #111b21;
+  --color-bubble-in: #ffffff;
+  --color-bubble-in-ink: #111b21;
+}
+html[data-bubbles='whatsapp'][data-theme='dark'] {
+  --color-canvas: #0b141a;
+  --color-brand: #00a884;
+  --color-brand-deep: #25d366;
+  --color-brand-bg: #0d2e26;
+  --color-bubble-out: #005c4b;
+  --color-bubble-out-ink: #e9edef;
+  --color-bubble-in: #202c33;
+  --color-bubble-in-ink: #e9edef;
+}
+
+/* iMessage:纯白画布、蓝色发送泡、灰色接收泡 */
+html[data-bubbles='imessage'] {
+  --color-canvas: #ffffff;
+  --color-brand: #0b93f6;
+  --color-brand-deep: #0a6cd8;
+  --color-brand-bg: #e3f2fd;
+  --color-bubble-out: #0b93f6;
+  --color-bubble-out-ink: #ffffff;
+  --color-bubble-in: #e9e9eb;
+  --color-bubble-in-ink: #1b1c1c;
+}
+html[data-bubbles='imessage'][data-theme='dark'] {
+  --color-canvas: #000000;
+  --color-brand: #0a84ff;
+  --color-brand-deep: #409cff;
+  --color-brand-bg: #0d2745;
+  --color-bubble-out: #0a84ff;
+  --color-bubble-out-ink: #ffffff;
+  --color-bubble-in: #26252a;
+  --color-bubble-in-ink: #f2f2f7;
+}
+
+/* 终端内容字号(设置面板调节,默认 13.5px) */
+:root {
+  --term-fs: 13.5px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    "Noto Sans CJK SC",
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 终端输出的等宽字体 */
+.font-mono-term {
+  font-family: "JetBrains Mono", "Fira Code", ui-monospace, "Cascadia Code", Menlo, Consolas,
+    "Noto Sans Mono CJK SC", monospace;
+}
+
+/* xterm.js 容器:终端视图保持深色(终端本色) */
+.xterm {
+  padding: 6px 8px;
+  height: 100%;
+}
+
+/* 终端内容随设置缩放 */
+.term-fs {
+  font-size: var(--term-fs);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}

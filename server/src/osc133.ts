@@ -227,34 +227,40 @@ export class Osc133Annotator {
       handled = OSC133_RE.lastIndex
     }
 
-    // 全屏/备用屏序列扫描(独立并行生效,不受降级影响)
-    const scanFrom = Math.max(0, this.altScanPos - 8)
-    this.scanAltScreen(this.buf.slice(scanFrom))
-    this.altScanPos = this.buf.length
-
-    // 仅当末尾包含未闭合（被 chunk 截断）的转义序列时，保留未完成的尾部到下轮
+    // 仅当末尾包含未闭合（被 chunk 截断）的转义序列时，保留未完成的尾部到下轮。
+    // 在 tail（OSC133 已消费之后的部分）内操作，阈值 128 字节覆盖带长路径的 OSC 序列。
     let keep = this.buf.length
-    const lastEsc = this.buf.lastIndexOf('\x1b')
-    if (lastEsc >= handled && lastEsc >= this.buf.length - 32) {
-      const rest = this.buf.slice(lastEsc)
+    const tail = this.buf.slice(handled)
+    const lastEscInTail = tail.lastIndexOf('\x1b')
+    if (lastEscInTail >= 0 && lastEscInTail >= tail.length - 128) {
+      const rest = tail.slice(lastEscInTail)
       const isCompleteCsi = /^\x1b\[[0-9;?]*[a-zA-Z~]/.test(rest)
       const isCompleteOsc = /^\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/.test(rest)
       if (!isCompleteCsi && !isCompleteOsc) {
-        keep = lastEsc
+        keep = handled + lastEscInTail
       }
     }
-    const tail = this.buf.slice(handled, keep)
-    this.routeText(tail)
+
+    // 全屏/备用屏序列扫描(独立并行生效,不受降级影响)。
+    // 仅扫描本轮实际确定输出的范围（handled→keep），避免 carry 保留区下一轮被重复扫描。
+    const scanFrom = Math.max(handled, this.altScanPos - 8)
+    this.scanAltScreen(this.buf.slice(scanFrom, keep))
+    this.altScanPos = keep
+
+    const outputTail = this.buf.slice(handled, keep)
+    this.routeText(outputTail)
     this.buf = this.buf.slice(keep)
     this.altScanPos = Math.max(0, this.altScanPos - keep)
 
     if (this.buf.length > 4096) {
+      this.scanAltScreen(this.buf)
       this.routeText(this.buf)
       this.buf = ''
       this.altScanPos = 0
     }
     this.flushOutput(false)
   }
+
 
   private scanAltScreen(text: string): void {
     if (text.length === 0) return

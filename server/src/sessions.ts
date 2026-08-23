@@ -62,6 +62,8 @@ export class Session {
   private activeSshCommandId: string | null = null
   /** 会话启动后自动执行的 ssh 命令(新建 SSH 会话);bash 首个提示符出现时写入 */
   private pendingSshCommand: string | null = null
+  /** 聊天路径发送的最近一条命令文本,作为回显为空时的兜底 */
+  private pendingCommandText: string | null = null
 
   constructor(
     private onDispose: (s: Session) => void,
@@ -292,9 +294,6 @@ export class Session {
       },
     })
   }
-
-  /** 聊天路径发送的最近一条命令文本,作为回显为空时的兜底 */
-  private pendingCommandText: string | null = null
 
   sendSystem(text: string): void {
     this.send({ type: 'system', text })

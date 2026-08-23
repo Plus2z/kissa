@@ -10,7 +10,9 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "electron .",
-    "dist:rpm": "ELECTRON_BUILDER_CACHE=\"$(pwd)/../.eb-cache\" ELECTRON_CACHE=\"$(pwd)/../.electron-cache\" electron-builder --linux rpm"
+    "dist:rpm": "ELECTRON_BUILDER_CACHE=\"$(pwd)/../.eb-cache\" ELECTRON_CACHE=\"$(pwd)/../.electron-cache\" env -u 'BASH_FUNC_module%%' -u 'BASH_FUNC_ml%%' -u 'BASH_FUNC__module_raw%%' electron-builder --linux rpm",
+    "dist:appimage": "ELECTRON_BUILDER_CACHE=\"$(pwd)/../.eb-cache\" ELECTRON_CACHE=\"$(pwd)/../.electron-cache\" env -u 'BASH_FUNC_module%%' -u 'BASH_FUNC_ml%%' -u 'BASH_FUNC__module_raw%%' electron-builder --linux AppImage",
+    "dist": "ELECTRON_BUILDER_CACHE=\"$(pwd)/../.eb-cache\" ELECTRON_CACHE=\"$(pwd)/../.electron-cache\" env -u 'BASH_FUNC_module%%' -u 'BASH_FUNC_ml%%' -u 'BASH_FUNC__module_raw%%' electron-builder --linux rpm AppImage"
   },
   "devDependencies": {
     "electron": "33.4.11",
@@ -37,7 +39,7 @@
       { "from": "icons", "to": "icons" }
     ],
     "linux": {
-      "target": ["rpm"],
+      "target": ["rpm", "AppImage"],
       "category": "Development",
       "icon": "icons/icon-512.png",
       "executableName": "kissa",
@@ -48,6 +50,9 @@
     "rpm": {
       "depends": ["python3", "bash"],
       "artifactName": "${productName}-${version}.${arch}.rpm"
+    },
+    "appImage": {
+      "artifactName": "${productName}-${version}.${arch}.AppImage"
     }
   }
 }

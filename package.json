@@ -17,7 +17,9 @@
     "test:ws": "node scripts/test-ws.mjs",
     "test:ssh": "node scripts/test-ssh-boundary.mjs",
     "prepare:server-deps": "bash scripts/prepare-server-deps.sh",
-    "dist:rpm": "npm run build && npm run prepare:server-deps && npm run dist:rpm -w desktop"
+    "dist:rpm": "npm run build && npm run prepare:server-deps && npm run dist:rpm -w desktop",
+    "dist:appimage": "npm run build && npm run prepare:server-deps && npm run dist:appimage -w desktop",
+    "dist": "npm run build && npm run prepare:server-deps && npm run dist -w desktop"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

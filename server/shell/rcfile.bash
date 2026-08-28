@@ -21,4 +21,15 @@ PROMPT_COMMAND="__terminal_chat_capture${PROMPT_COMMAND:+;$PROMPT_COMMAND};__ter
 
 # PS0 在命令被接受、执行前展开;框架一般不动它
 PS0=$'\033]133;C\007'
+
+# 终端色彩支持
+export CLICOLOR=1
+export COLORTERM=truecolor
+if [ -x /usr/bin/dircolors ]; then
+  test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+fi
+alias ls='ls --color=auto'
+alias grep='grep --color=auto'
+alias diff='diff --color=auto'
 # ---- end kissa shell integration ----
+

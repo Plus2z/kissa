@@ -261,7 +261,11 @@ export class Session {
       cols,
       rows,
       cwd: this.sessionCwd,
-      env: { TERM: 'xterm-256color' },
+      env: {
+        TERM: 'xterm-256color',
+        COLORTERM: 'truecolor',
+        CLICOLOR: '1',
+      },
     }, {
       onData: (data) => {
         this.rawRing.push(data)

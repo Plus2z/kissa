@@ -112,9 +112,10 @@ export function generateSentinelToken(): string {
  */
 export function buildSentinelInjection(token: string): string {
   const marker = `@@CTI_${token}_$?@@`
+  const colorSetup = `export CLICOLOR=1 COLORTERM=truecolor TERM=xterm-256color 2>/dev/null; if [ -x /usr/bin/dircolors ]; then eval "$(dircolors -b 2>/dev/null)" 2>/dev/null; fi; alias ls='ls --color=auto' 2>/dev/null; alias grep='grep --color=auto' 2>/dev/null; alias diff='diff --color=auto' 2>/dev/null`
   // zsh: 启用 PROMPT_SUBST 并设置 PROMPT（$? 在提示符展开时求值）
   // bash/sh/dash/busybox: 设置 PS1（$? 在提示符展开时求值）
-  return `if [ -n "$ZSH_VERSION" ]; then setopt PROMPT_SUBST 2>/dev/null; PROMPT=$'\\n${marker}\\n'; else export PS1='\\n${marker}\\n'; fi`
+  return `if [ -n "$ZSH_VERSION" ]; then ${colorSetup}; setopt PROMPT_SUBST 2>/dev/null; PROMPT=$'\\n${marker}\\n'; else ${colorSetup}; export PS1='\\n${marker}\\n'; fi`
 }
 
 /** 极简 shell (如 dash/busybox sh) 无法动态求值 PS1 时的命令透明后缀包装 */

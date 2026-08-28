@@ -1,13 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from './store'
 import { net, hydrateFromServer } from './net'
-import { useSettings, applyTheme, applyFontSize } from './settings'
-import { MessageList } from './components/MessageList'
+import {
+  useSettings,
+  applyTheme,
+  applyFontSize,
+  applyFontFamily,
+  applyColorScheme,
+} from './settings'
+import { t } from './i18n'
+import { MessageList, type MessageListHandle } from './components/MessageList'
 import { InputBar } from './components/InputBar'
 import { TerminalPane } from './components/TerminalPane'
 import { SettingsModal } from './components/SettingsModal'
 import { Avatar } from './components/Avatar'
 import { SessionPanel } from './components/SessionPanel'
+import { SearchOverlay } from './components/SearchOverlay'
+import { formatSessionAsMarkdown, downloadMarkdown } from './exportUtils'
 
 export default function App() {
   const connStatus = useStore((s) => s.connStatus)
@@ -15,12 +24,18 @@ export default function App() {
   const hostname = useStore((s) => s.hostname)
   const sessionName = useStore((s) => s.sessionName)
   const sshTarget = useStore((s) => s.sshTarget)
+  const messages = useStore((s) => s.messages)
   const [showTerminal, setShowTerminal] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showSessions, setShowSessions] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
+  const messageListRef = useRef<MessageListHandle>(null)
+
   const theme = useSettings((s) => s.theme)
   const bubbleTheme = useSettings((s) => s.bubbleTheme)
+  const colorScheme = useSettings((s) => s.colorScheme)
   const fontSize = useSettings((s) => s.fontSize)
+  const fontFamily = useSettings((s) => s.fontFamily)
   const termAvatar = useSettings((s) => s.termAvatar)
   const fullscreen = useStore((s) => s.fullscreen)
   const boundaryMode = useStore((s) => s.boundaryMode)
@@ -50,20 +65,126 @@ export default function App() {
 
   // 主题应用:'auto' 跟随系统,系统切换时实时响应;气泡配色独立组合
   useEffect(() => {
-    const apply = () => applyTheme(theme, bubbleTheme)
+    const apply = () => {
+      applyTheme(theme, bubbleTheme)
+      applyColorScheme(colorScheme, theme)
+    }
     apply()
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
     mq.addEventListener('change', apply)
     return () => mq.removeEventListener('change', apply)
-  }, [theme, bubbleTheme])
+  }, [theme, bubbleTheme, colorScheme])
 
   useEffect(() => {
     applyFontSize(fontSize)
   }, [fontSize])
 
+  useEffect(() => {
+    applyFontFamily(fontFamily)
+  }, [fontFamily])
+
+  const handleExport = () => {
+    const md = formatSessionAsMarkdown(messages, {
+      sessionName,
+      hostname,
+      targetName:
+        nestedTargetName ||
+        (sshTarget ? `${sshTarget.user ? sshTarget.user + '@' : ''}${sshTarget.host}` : undefined),
+    })
+    const dateStr = new Date().toISOString().slice(0, 10)
+    const safeName = (sessionName || hostname || 'session').replace(
+      /[^a-zA-Z0-9_\u4e00-\u9fa5-]/g,
+      '_',
+    )
+    downloadMarkdown(md, `kissa-${safeName}-${dateStr}.md`)
+  }
+
+  // 窗口切回 / 应用唤醒自动聚焦输入框
+  useEffect(() => {
+    const focusInput = () => {
+      if (!showTerminal && !showSettings && !showSessions) {
+        window.dispatchEvent(new CustomEvent('kissa:focus-input'))
+      }
+    }
+    window.addEventListener('focus', focusInput)
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        focusInput()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('focus', focusInput)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [showTerminal, showSettings, showSessions])
+
+  // 全局快捷键与事件监听
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      // 光标不在输入框时按 Tab: 直接进入输入模式
+      if (e.key === 'Tab' && !showTerminal && !showSettings && !showSessions && !showSearch) {
+        const active = document.activeElement as HTMLElement | null
+        const isInput = active?.tagName === 'INPUT' || active?.tagName === 'TEXTAREA'
+        if (!isInput) {
+          e.preventDefault()
+          window.dispatchEvent(new CustomEvent('kissa:focus-input'))
+          return
+        }
+      }
+
+      // Ctrl+F / Cmd+F: 触发搜索
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f' && !showTerminal) {
+        e.preventDefault()
+        setShowSearch((v) => !v)
+        return
+      }
+      // Ctrl+L: 清空聊天流
+      if (e.ctrlKey && e.key.toLowerCase() === 'l' && !showTerminal) {
+        e.preventDefault()
+        useStore.setState({
+          messages: [
+            {
+              id: `sys-clear-${Date.now()}`,
+              kind: 'system',
+              ts: Date.now(),
+              text: '✨ 聊天界面已清空 (Ctrl+L)',
+            },
+          ],
+        })
+        return
+      }
+      // Ctrl+` (反引号): 切换终端视图
+      if (e.ctrlKey && e.key === '`') {
+        e.preventDefault()
+        setShowTerminal((v) => !v)
+      }
+    }
+
+    const onExportEv = () => handleExport()
+    const onOpenSshEv = () => setShowSessions(true)
+
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('kissa:export', onExportEv)
+    window.addEventListener('kissa:open-ssh', onOpenSshEv)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('kissa:export', onExportEv)
+      window.removeEventListener('kissa:open-ssh', onOpenSshEv)
+    }
+  }, [showTerminal, showSettings, showSessions, showSearch, messages, sessionName, hostname, nestedTargetName, sshTarget])
+
+  const language = useSettings((s) => s.language)
+  const tr = t(language)
+
   const statusColor =
     connStatus === 'ready' ? 'bg-brand' : connStatus === 'connecting' ? 'bg-amber-400' : 'bg-danger'
-  const statusText = connStatus === 'ready' ? '已连接' : connStatus === 'connecting' ? '连接中' : '重连中'
+  const statusText =
+    connStatus === 'ready'
+      ? tr.statusConnected
+      : connStatus === 'connecting'
+      ? tr.statusConnecting
+      : tr.statusReconnecting
 
   return (
     <div className="flex h-screen flex-col bg-canvas text-ink">
@@ -84,32 +205,65 @@ export default function App() {
                   ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
                   : 'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300'
               }`}
-              title={`嵌套环境: ${nestedTargetName || 'Shell'} | 模式: ${boundaryMode}`}
+              title={`${tr.nestedShell}: ${nestedTargetName || 'Shell'} | 模式: ${boundaryMode}`}
             >
-              {boundaryMode === 'osc133' ? '🎯 OSC133' : boundaryMode === 'sentinel' ? '⚡ 哨兵' : '🛡️ 兼容'}
+              {boundaryMode === 'osc133' ? '🎯 OSC133' : boundaryMode === 'sentinel' ? '⚡ Sentinel' : '🛡️ Raw'}
             </span>
           )}
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <span className="font-mono-term hidden max-w-[280px] truncate text-xs text-ink-2 sm:block" title={cwd}>
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+          <span className="font-mono-term hidden max-w-[240px] truncate text-xs text-ink-2 md:block" title={cwd}>
             {cwd.replace(/^\/home\/[^/]+/, '~')}
           </span>
+
+          {/* 搜索按钮 */}
+          {!showTerminal && (
+            <button
+              onClick={() => setShowSearch((v) => !v)}
+              className={
+                'flex h-8 w-8 items-center justify-center rounded-full transition-colors ' +
+                (showSearch ? 'bg-brand-bg text-brand-deep' : 'text-ink-2 hover:bg-ink/5 hover:text-ink')
+              }
+              title={tr.search}
+              aria-label={tr.search}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </button>
+          )}
+
+          {/* 导出按钮 */}
+          <button
+            onClick={handleExport}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-ink-2 transition-colors hover:bg-ink/5 hover:text-ink"
+            title={tr.exportMarkdown}
+            aria-label={tr.exportMarkdown}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </button>
+
           <button
             onClick={() => setShowSessions(true)}
             className="flex h-8 items-center justify-center rounded-lg px-2 text-xs text-ink-2 transition-colors hover:bg-ink/5 hover:text-ink"
-            title="会话管理"
+            title={tr.sessions}
           >
-            会话
+            {tr.sessions}
           </button>
           <button
             onClick={() => setShowSettings(true)}
             className="flex h-8 w-8 items-center justify-center rounded-full text-ink-2 transition-colors hover:bg-ink/5 hover:text-ink"
-            title="设置"
-            aria-label="设置"
+            title={tr.settings}
+            aria-label={tr.settings}
           >
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
             </svg>
           </button>
           <button
@@ -120,26 +274,34 @@ export default function App() {
                 ? 'bg-brand-bg text-brand-deep'
                 : 'text-ink-2 hover:bg-ink/5 hover:text-ink')
             }
-            title="降级路径:任何增强视图出问题时,切到这里就是完整的真实终端"
+            title={showTerminal ? tr.returnToChat : `${tr.terminalView} (Ctrl+\`)`}
           >
             {/* 终端小图标 */}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="4 17 10 11 4 5" />
               <line x1="12" y1="19" x2="20" y2="19" />
             </svg>
-            {showTerminal ? '返回对话' : '终端视图'}
+            {showTerminal ? tr.returnToChat : tr.terminalView}
             {fullscreen.active && (
-              <span className="ml-0.5 h-1.5 w-1.5 animate-pulse rounded-full bg-brand" title="全屏程序运行中" />
+              <span className="ml-0.5 h-1.5 w-1.5 animate-pulse rounded-full bg-brand" title={tr.fullscreenActive} />
             )}
           </button>
         </div>
       </header>
 
+      {showSearch && (
+        <SearchOverlay
+          messages={messages}
+          onClose={() => setShowSearch(false)}
+          onNavigate={(idx) => messageListRef.current?.scrollToIndex(idx)}
+        />
+      )}
+
       {showTerminal ? (
         <TerminalPane onClose={() => setShowTerminal(false)} />
       ) : (
         <>
-          <MessageList />
+          <MessageList ref={messageListRef} />
           <InputBar />
         </>
       )}

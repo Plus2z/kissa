@@ -27,6 +27,26 @@
   --color-bubble-in-ink: #191919; /* 接收方气泡文本 */
 }
 
+:root {
+  /* 终端 ANSI 16 色 (浅色默认) */
+  --term-color-0: #1e1e1e; /* Black */
+  --term-color-1: #c72e2e; /* Red */
+  --term-color-2: #0b8f51; /* Green */
+  --term-color-3: #9b7200; /* Yellow */
+  --term-color-4: #1565c0; /* Blue (目录常用) */
+  --term-color-5: #8e24aa; /* Magenta */
+  --term-color-6: #00838f; /* Cyan */
+  --term-color-7: #616161; /* White */
+  --term-color-8: #9e9e9e; /* Bright Black */
+  --term-color-9: #e53935; /* Bright Red */
+  --term-color-10: #1b5e20; /* Bright Green */
+  --term-color-11: #b28704; /* Bright Yellow */
+  --term-color-12: #0277bd; /* Bright Blue */
+  --term-color-13: #ab47bc; /* Bright Magenta */
+  --term-color-14: #00acc1; /* Bright Cyan */
+  --term-color-15: #212121; /* Bright White */
+}
+
 html[data-theme='dark'] {
   --color-canvas: #101318;
   --color-surface: #0d1015;
@@ -43,6 +63,24 @@ html[data-theme='dark'] {
   --color-bubble-out-ink: #ffffff;
   --color-bubble-in: #1b212a;
   --color-bubble-in-ink: #d7dbe2;
+
+  /* 终端 ANSI 16 色 (深色默认: One Dark / Modern Terminal 色系) */
+  --term-color-0: #282c34;
+  --term-color-1: #e06c75;
+  --term-color-2: #98c379;
+  --term-color-3: #e5c07b;
+  --term-color-4: #61afef;
+  --term-color-5: #c678dd;
+  --term-color-6: #56b6c2;
+  --term-color-7: #abb2bf;
+  --term-color-8: #5c6370;
+  --term-color-9: #e06c75;
+  --term-color-10: #98c379;
+  --term-color-11: #e5c07b;
+  --term-color-12: #61afef;
+  --term-color-13: #c678dd;
+  --term-color-14: #56b6c2;
+  --term-color-15: #ffffff;
 }
 
 /*
@@ -127,8 +165,17 @@ body {
 
 /* 终端输出的等宽字体 */
 .font-mono-term {
-  font-family: "JetBrains Mono", "Fira Code", ui-monospace, "Cascadia Code", Menlo, Consolas,
-    "Noto Sans Mono CJK SC", monospace;
+  font-family: var(
+    --font-mono-term,
+    "JetBrains Mono",
+    "Fira Code",
+    ui-monospace,
+    "Cascadia Code",
+    Menlo,
+    Consolas,
+    "Noto Sans Mono CJK SC",
+    monospace
+  );
 }
 
 /* xterm.js 容器:终端视图保持深色(终端本色) */

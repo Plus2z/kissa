@@ -124,7 +124,7 @@ console.log('🧪 Starting SSH & Nested Shell Boundary Tests...')
   
   // 2. 远程要求密码
   annotator.write("root@192.168.0.105's password: ")
-  await new Promise((resolve) => setTimeout(resolve, 700)) // 等待 tick() 触发 input_request
+  await new Promise((resolve) => setTimeout(resolve, 900)) // 等待 tick() 触发 input_request
 
   const req = events.find((e) => e.kind === 'input_request' && e.mode === 'password')
   assert.ok(req, 'Password input_request should be triggered')

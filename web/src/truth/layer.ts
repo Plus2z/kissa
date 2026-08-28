@@ -13,12 +13,58 @@
  */
 
 import { Terminal as HeadlessTerminal } from '@xterm/headless'
-import { Terminal } from '@xterm/xterm'
+import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
+import {
+  COLOR_SCHEMES,
+  type ColorSchemeId,
+  type ThemeMode,
+} from '../settings'
 
 /** 回放缓冲上限:4MB,超出后丢弃最旧的字节(真相层退化为"从最近 4MB 开始") */
 const REPLAY_LIMIT = 4 * 1024 * 1024
+
+export interface TerminalDisplayOptions {
+  fontSize?: number
+  fontFamily?: string
+  colorScheme?: ColorSchemeId
+  themeMode?: ThemeMode
+}
+
+export function getXtermTheme(schemeId: ColorSchemeId = 'default', mode: ThemeMode = 'dark'): ITheme {
+  const dark =
+    mode === 'dark' ||
+    (mode === 'auto' &&
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches)
+  const scheme = COLOR_SCHEMES[schemeId] ?? COLOR_SCHEMES.default
+  const c = dark ? scheme.colors.dark : scheme.colors.light
+
+  return {
+    background: dark ? '#0d1015' : '#f7f7f7',
+    foreground: dark ? '#d7dbe2' : '#191919',
+    cursor: dark ? '#3fd47f' : '#07c160',
+    selectionBackground: dark ? '#143126' : '#e7f7ee',
+    selectionForeground: dark ? '#ffffff' : '#000000',
+    black: c[0],
+    red: c[1],
+    green: c[2],
+    yellow: c[3],
+    blue: c[4],
+    magenta: c[5],
+    cyan: c[6],
+    white: c[7],
+    brightBlack: c[8],
+    brightRed: c[9],
+    brightGreen: c[10],
+    brightYellow: c[11],
+    brightBlue: c[12],
+    brightMagenta: c[13],
+    brightCyan: c[14],
+    brightWhite: c[15],
+  }
+}
 
 class TruthLayer {
   private headless = new HeadlessTerminal({ cols: 80, rows: 24, scrollback: 5000 })
@@ -51,17 +97,20 @@ class TruthLayer {
     el: HTMLElement,
     onData: (data: string) => void,
     onResize: (cols: number, rows: number) => void,
-    fontSize = 13,
+    opts: TerminalDisplayOptions = {},
   ): void {
     if (this.term) return
+    const fontSize = opts.fontSize ?? 13
+    const fontFamily =
+      !opts.fontFamily || opts.fontFamily === 'default'
+        ? '"JetBrains Mono", "Fira Code", ui-monospace, Menlo, Consolas, monospace'
+        : `"${opts.fontFamily}", "JetBrains Mono", "Fira Code", ui-monospace, monospace`
+    const theme = getXtermTheme(opts.colorScheme, opts.themeMode)
+
     const term = new Terminal({
-      fontFamily: '"JetBrains Mono", "Fira Code", ui-monospace, Menlo, Consolas, monospace',
+      fontFamily,
       fontSize,
-      theme: {
-        background: '#0b0e14',
-        foreground: '#d5d9e0',
-        cursor: '#7aa2f7',
-      },
+      theme,
       scrollback: 5000,
       convertEol: false,
     })
@@ -110,6 +159,27 @@ class TruthLayer {
     this.resizeObserver.observe(el)
     term.focus()
     onResize(term.cols, term.rows)
+  }
+
+  updateOptions(opts: TerminalDisplayOptions): void {
+    if (!this.term) return
+    if (opts.fontSize !== undefined) {
+      this.term.options.fontSize = opts.fontSize
+    }
+    if (opts.fontFamily !== undefined) {
+      this.term.options.fontFamily =
+        !opts.fontFamily || opts.fontFamily === 'default'
+          ? '"JetBrains Mono", "Fira Code", ui-monospace, Menlo, Consolas, monospace'
+          : `"${opts.fontFamily}", "JetBrains Mono", "Fira Code", ui-monospace, monospace`
+    }
+    if (opts.colorScheme !== undefined || opts.themeMode !== undefined) {
+      this.term.options.theme = getXtermTheme(opts.colorScheme, opts.themeMode)
+    }
+    try {
+      this.fit?.fit()
+    } catch {
+      /* 忽略 */
+    }
   }
 
   /** 卸载可见终端。真相层(回放缓冲 + 无头状态机)继续运转。 */

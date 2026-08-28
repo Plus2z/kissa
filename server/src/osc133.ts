@@ -86,6 +86,16 @@ export function stripAnsi(s: string): string {
     .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '')
 }
 
+/** 清理终端控制序列，但保留 ANSI SGR 颜色和样式序列 (\x1b[...m) */
+export function cleanAnsiForOutput(s: string): string {
+  return s
+    .replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)?/g, '')
+    .replace(/\x1b[PX^_][\s\S]*?\x1b\\/g, '')
+    .replace(/\x1b[()][AB012]/g, '')
+    .replace(/\x1b\[[0-9;?]*[a-ln-zA-Z~]/g, '')
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1a\x1c-\x1f\x7f]/g, '')
+}
+
 function collapseCr(s: string): string {
   return s
     .split('\n')
@@ -100,7 +110,7 @@ function collapseCr(s: string): string {
 }
 
 function renderForAnnotation(raw: string): string {
-  return stripAnsi(collapseCr(raw))
+  return cleanAnsiForOutput(collapseCr(raw))
 }
 
 function classifyPrompt(line: string): { mode: 'password' | 'confirm' | 'text' } | null {
@@ -163,7 +173,7 @@ export class Osc133Annotator {
     private onEvent: (ev: AnnotatorEvent) => void,
     private fallbackText?: () => string | null,
   ) {
-    this.timer = setInterval(() => this.tick(), Math.max(150, INPUT_SILENCE_MS / 2))
+    this.timer = setInterval(() => this.tick(), 100)
     this.timer.unref?.()
   }
 
@@ -735,15 +745,16 @@ export class Osc133Annotator {
   private detectStructured(): void {
     if (this.commandId === null || this.outBuf.length === 0) return
     const rendered = renderForAnnotation(this.outBuf)
+    const plain = stripAnsi(rendered)
     try {
-      if (rendered.startsWith('diff --git ') || /^git\s+(diff|show|log\s+-p)\b/.test(this.lastCommandText)) {
-        const d = parseDiff(rendered)
+      if (plain.startsWith('diff --git ') || /^git\s+(diff|show|log\s+-p)\b/.test(this.lastCommandText)) {
+        const d = parseDiff(plain)
         if (d) {
           this.onEvent({ kind: 'structured', commandId: this.commandId, view: 'diff', data: d })
           return
         }
       }
-      const j = parseJson(rendered)
+      const j = parseJson(plain)
       if (j !== null) {
         this.onEvent({ kind: 'structured', commandId: this.commandId, view: 'json', data: j })
       }

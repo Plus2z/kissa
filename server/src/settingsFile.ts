@@ -17,12 +17,18 @@ export interface StoredSettings {
   theme?: string
   bubbleTheme?: string
   fontSize?: number
+  fontFamily?: string
+  colorScheme?: string
+  language?: string
   userAvatar?: unknown
   termAvatar?: unknown
 }
 
 const THEMES = new Set(['light', 'dark', 'auto'])
 const BUBBLES = new Set(['wechat', 'whatsapp', 'imessage'])
+const FONTS = new Set(['default', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Source Code Pro', 'monospace'])
+const COLOR_SCHEMES = new Set(['default', 'dracula', 'one-dark', 'monokai', 'nord', 'solarized'])
+const LANGUAGES = new Set(['zh', 'en'])
 
 /** 校验并收敛为合法形状,非法字段静默丢弃 */
 function sanitize(raw: unknown): StoredSettings {
@@ -31,6 +37,9 @@ function sanitize(raw: unknown): StoredSettings {
   const r = raw as Record<string, unknown>
   if (typeof r.theme === 'string' && THEMES.has(r.theme)) out.theme = r.theme
   if (typeof r.bubbleTheme === 'string' && BUBBLES.has(r.bubbleTheme)) out.bubbleTheme = r.bubbleTheme
+  if (typeof r.fontFamily === 'string' && FONTS.has(r.fontFamily)) out.fontFamily = r.fontFamily
+  if (typeof r.colorScheme === 'string' && COLOR_SCHEMES.has(r.colorScheme)) out.colorScheme = r.colorScheme
+  if (typeof r.language === 'string' && LANGUAGES.has(r.language)) out.language = r.language
   if (typeof r.fontSize === 'number' && Number.isFinite(r.fontSize)) {
     out.fontSize = Math.min(22, Math.max(11, r.fontSize))
   }

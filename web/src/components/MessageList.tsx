@@ -1,13 +1,23 @@
-import { useEffect, useRef } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso'
 import { useStore } from '../store'
 import { CommandBubble } from './CommandBubble'
 import { OutputBubble } from './OutputBubble'
 import { SystemBubble } from './SystemBubble'
 
-export function MessageList() {
+export interface MessageListHandle {
+  scrollToIndex: (index: number) => void
+}
+
+export const MessageList = forwardRef<MessageListHandle>((_props, ref) => {
   const messages = useStore((s) => s.messages)
   const virtuosoRef = useRef<VirtuosoHandle>(null)
+
+  useImperativeHandle(ref, () => ({
+    scrollToIndex: (index: number) => {
+      virtuosoRef.current?.scrollToIndex({ index, align: 'center', behavior: 'smooth' })
+    },
+  }))
 
   useEffect(() => {
     virtuosoRef.current?.scrollToIndex({ index: messages.length - 1, behavior: 'auto' })
@@ -29,4 +39,6 @@ export function MessageList() {
       />
     </div>
   )
-}
+})
+
+MessageList.displayName = 'MessageList'

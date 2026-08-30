@@ -138,8 +138,9 @@ export function InputBar() {
     withSuffix: boolean,
   ) => {
     const el = inputRef.current
-    const quoted = quoteIfNeeded(word)
-    const suffix = !withSuffix ? '' : dirs.has(word) ? '/' : ' '
+    const cleanWord = word.trimEnd()
+    const quoted = quoteIfNeeded(cleanWord)
+    const suffix = !withSuffix ? '' : dirs.has(cleanWord) ? '/' : ' '
     const next = value.slice(0, range.start) + quoted + suffix + value.slice(range.end)
     setValue(next)
     const caret = range.start + quoted.length + suffix.length
@@ -261,20 +262,17 @@ export function InputBar() {
       return
     }
 
-    // 候选弹层导航
     if (comp && comp.items.length > 0) {
       if (e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
         e.preventDefault()
         const sel = (comp.sel + 1) % comp.items.length
         setComp({ ...comp, sel })
-        applyWord(comp.items[sel]!, comp, comp.dirs, false)
         return
       }
       if (e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey)) {
         e.preventDefault()
         const sel = (comp.sel - 1 + comp.items.length) % comp.items.length
         setComp({ ...comp, sel })
-        applyWord(comp.items[sel]!, comp, comp.dirs, false)
         return
       }
       if (e.key === 'Enter') {

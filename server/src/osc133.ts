@@ -82,6 +82,7 @@ export function stripAnsi(s: string): string {
   return s
     .replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)?/g, '')
     .replace(/\x1b[PX^_][\s\S]*?\x1b\\/g, '')
+    .replace(/\x1b[()][AB012]/g, '')
     .replace(/\x1b[[\x30-\x3f]*[\x20-\x2f]*[\x40-\x7e]/g, '')
     .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '')
 }
@@ -118,7 +119,7 @@ function classifyPrompt(line: string): { mode: 'password' | 'confirm' | 'text' }
   if (l.length === 0) return null
   if (/password|passphrase|密码/i.test(l)) return { mode: 'password' }
   if (/\(y\/n\)|\[y\/n\]|\[Y\/N\]|\(yes\/no\)|\[yes\/no\]|\(Y\/N\)/i.test(l)) return { mode: 'confirm' }
-  if (/[:?::?]$/.test(l)) return { mode: 'text' }
+  if (/[:?：？]$/.test(l)) return { mode: 'text' }
   return null
 }
 

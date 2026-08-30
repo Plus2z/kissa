@@ -42,6 +42,7 @@ export interface InputRequest {
 
 interface AppState {
   connStatus: ConnStatus
+  sessionId: string | null
   cwd: string
   /** 服务端上报的主机名(本机设备名,终端名的默认来源) */
   hostname: string
@@ -68,6 +69,7 @@ interface AppState {
 
 export const useStore = create<AppState>()((set) => ({
   connStatus: 'connecting',
+  sessionId: null,
   cwd: '~',
   hostname: '',
   sessionName: '',
@@ -83,11 +85,14 @@ export const useStore = create<AppState>()((set) => ({
     switch (msg.type) {
       case 'ready':
         set((s) => ({
+          sessionId: msg.sessionId,
           hostname: msg.hostname,
-          messages: [
-            ...s.messages,
-            { id: `sys-${Date.now()}`, kind: 'system', ts: Date.now(), text: `会话就绪(${msg.shell})` },
-          ],
+          messages: msg.resumed
+            ? s.messages
+            : [
+                ...s.messages,
+                { id: `sys-${Date.now()}`, kind: 'system', ts: Date.now(), text: `会话就绪(${msg.shell})` },
+              ],
         }))
         break
       case 'cwd':
@@ -236,6 +241,7 @@ export const useStore = create<AppState>()((set) => ({
 
   reset: () =>
     set({
+      sessionId: null,
       messages: [],
       cwd: '~',
       hostname: '',

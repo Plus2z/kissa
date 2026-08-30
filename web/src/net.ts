@@ -81,11 +81,11 @@ function routeMessage(msg: ServerMessage): void {
     return
   }
   if (msg.type === 'ready') {
-    useStore.getState().setConnStatus('ready')
-    useStore.getState().handleServer(msg)
     if (msg.resumed) {
       resumedOnce = true
       saveSessionId(msg.sessionId)
+      useStore.getState().setConnStatus('ready')
+      useStore.getState().handleServer(msg)
     } else {
       // 新会话:旧状态(真相层/聊天层/会话 id)全部作废
       resumedOnce = false
@@ -94,6 +94,7 @@ function routeMessage(msg: ServerMessage): void {
       saveSessionId(msg.sessionId)
       truthLayer.reset()
       useStore.getState().reset()
+      useStore.getState().setConnStatus('ready')
       useStore.getState().handleServer(msg)
     }
     return

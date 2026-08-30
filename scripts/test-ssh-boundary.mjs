@@ -182,4 +182,28 @@ console.log('🧪 Starting SSH & Nested Shell Boundary Tests...')
   console.log('    ✓ Fullscreen independence for TUI verified')
 }
 
+// Test 6: stripAnsi 字符集序列过滤与中文交互提示符匹配
+{
+  console.log('  Testing stripAnsi charset escapes and Chinese interactive prompts...')
+  const { stripAnsi } = await import('../server/dist/osc133.js')
+
+  // 1. stripAnsi 过滤 \x1b(B / \x1b)0 等字符集控制字符
+  const rawWithCharset = '\x1b(B\x1b[0m\x1b[32mhello world\x1b(B'
+  assert.strictEqual(stripAnsi(rawWithCharset), 'hello world', 'stripAnsi must clean \\x1b(B charset sequences')
+
+  // 2. 中文冒号与问号 prompt 探测
+  const events = []
+  const annotator = new Osc133Annotator((ev) => events.push(ev))
+  annotator.write('\x1b]133;A;/home\x07\x1b]133;B\x07python install.py\x1b]133;C\x07')
+  annotator.write('请输入目标端口：')
+  await new Promise((resolve) => setTimeout(resolve, 800))
+
+  const promptReq = events.find((e) => e.kind === 'input_request' && e.mode === 'text')
+  assert.ok(promptReq, 'Chinese full-width colon prompt must trigger input_request')
+  assert.ok(promptReq.prompt.includes('请输入目标端口：'))
+
+  annotator.close(0)
+  console.log('    ✓ stripAnsi charset cleanup and Chinese prompt detection passed')
+}
+
 console.log('🎉 All SSH & Nested Shell Boundary Tests Passed!')

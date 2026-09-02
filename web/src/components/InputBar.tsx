@@ -230,13 +230,6 @@ export function InputBar() {
     if (running) {
       setValue('')
       setComp(null)
-      if (fullscreen.active && fullscreen.mode === 'pager') {
-        const trimmed = text.trim()
-        if (trimmed === 'q' || trimmed === ':q') {
-          net.send({ type: 'stdin', data: 'q' })
-          return
-        }
-      }
       net.send({ type: 'stdin', data: text + '\n' })
       return
     }
@@ -269,6 +262,30 @@ export function InputBar() {
       return
     }
 
+    // Pager 模式快捷键 (Ctrl+组合键)
+    if (fullscreen.active && fullscreen.mode === 'pager' && (e.ctrlKey || e.metaKey)) {
+      if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'u') {
+        e.preventDefault()
+        window.dispatchEvent(new CustomEvent('kissa:pager-action', { detail: { action: 'up' } }))
+        return
+      }
+      if (e.key === 'ArrowDown' || e.key.toLowerCase() === 'd') {
+        e.preventDefault()
+        window.dispatchEvent(new CustomEvent('kissa:pager-action', { detail: { action: 'down' } }))
+        return
+      }
+      if (e.key.toLowerCase() === 'k' || e.key === '/') {
+        e.preventDefault()
+        window.dispatchEvent(new CustomEvent('kissa:pager-action', { detail: { action: 'search' } }))
+        return
+      }
+      if (e.key.toLowerCase() === 'e') {
+        e.preventDefault()
+        window.dispatchEvent(new CustomEvent('kissa:pager-action', { detail: { action: 'exit' } }))
+        return
+      }
+    }
+
     if (comp && comp.items.length > 0) {
       if (e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
         e.preventDefault()
@@ -298,7 +315,7 @@ export function InputBar() {
       }
     } else {
       // 历史命令导航 (未打开 Tab 补全列表时)
-      if (e.key === 'ArrowUp' && !running) {
+      if (e.key === 'ArrowUp' && !e.ctrlKey && !e.metaKey && !running) {
         const history = historyRef.current
         if (history.length > 0) {
           e.preventDefault()
@@ -315,7 +332,7 @@ export function InputBar() {
           })
           return
         }
-      } else if (e.key === 'ArrowDown' && !running) {
+      } else if (e.key === 'ArrowDown' && !e.ctrlKey && !e.metaKey && !running) {
         const history = historyRef.current
         if (historyIdxRef.current !== -1) {
           e.preventDefault()
@@ -366,6 +383,85 @@ export function InputBar() {
       onDragOver={(e) => e.preventDefault()}
       onDrop={handleDrop}
     >
+      {/* 分页模式底部交互控制条 (放置于底部, 带 Ctrl+ 快捷键提示) */}
+      {fullscreen.active && fullscreen.mode === 'pager' && (
+        <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-brand/30 bg-brand-bg/50 px-3.5 py-1.5 shadow-xs backdrop-blur-sm animate-fade-in">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-brand animate-pulse" />
+            <span className="text-[12px] font-medium text-brand-deep">
+              📖 {tr.pagerMode}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                window.dispatchEvent(
+                  new CustomEvent('kissa:pager-action', { detail: { action: 'up' } }),
+                )
+              }
+              className="flex items-center gap-1 rounded-md border border-line bg-bubble-in px-2.5 py-1 text-[11px] font-medium text-ink hover:bg-ink/5 active:scale-95 transition-all shadow-xs"
+              title={`${tr.pageUp} (Ctrl+↑)`}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="18 15 12 9 6 15" />
+              </svg>
+              <span>{tr.pageUp}</span>
+              <kbd className="ml-1 rounded bg-ink/10 px-1 py-0.2 text-[9px] font-mono text-ink-2">Ctrl+↑</kbd>
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                window.dispatchEvent(
+                  new CustomEvent('kissa:pager-action', { detail: { action: 'down' } }),
+                )
+              }
+              className="flex items-center gap-1 rounded-md border border-line bg-bubble-in px-2.5 py-1 text-[11px] font-medium text-ink hover:bg-ink/5 active:scale-95 transition-all shadow-xs"
+              title={`${tr.pageDown} (Ctrl+↓)`}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+              <span>{tr.pageDown}</span>
+              <kbd className="ml-1 rounded bg-ink/10 px-1 py-0.2 text-[9px] font-mono text-ink-2">Ctrl+↓</kbd>
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                window.dispatchEvent(
+                  new CustomEvent('kissa:pager-action', { detail: { action: 'search' } }),
+                )
+              }
+              className="flex items-center gap-1 rounded-md border border-line bg-bubble-in px-2.5 py-1 text-[11px] font-medium text-ink hover:bg-ink/5 active:scale-95 transition-all shadow-xs"
+              title={`${tr.pagerSearch} (Ctrl+K)`}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <span>{tr.pagerSearch}</span>
+              <kbd className="ml-1 rounded bg-ink/10 px-1 py-0.2 text-[9px] font-mono text-ink-2">Ctrl+K</kbd>
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                window.dispatchEvent(
+                  new CustomEvent('kissa:pager-action', { detail: { action: 'exit' } }),
+                )
+              }
+              className="flex items-center gap-1 rounded-md border border-danger/30 bg-danger/10 px-2.5 py-1 text-[11px] font-medium text-danger hover:bg-danger/20 active:scale-95 transition-all shadow-xs"
+              title={`${tr.pagerExit} (Ctrl+E)`}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+              <span>{tr.pagerExit}</span>
+              <kbd className="ml-1 rounded bg-danger/15 px-1 py-0.2 text-[9px] font-mono text-danger">Ctrl+E</kbd>
+            </button>
+          </div>
+        </div>
+      )}
       <div className="relative flex items-end gap-3">
         {/* 危险命令确认:命中规则先确认再发送;服务端会再拦一道未确认的 */}
         {danger && (
@@ -465,10 +561,8 @@ export function InputBar() {
             placeholder={
               connStatus === 'ready'
                 ? running
-                  ? fullscreen.active
-                    ? fullscreen.mode === 'pager'
-                      ? tr.inputPlaceholderPager
-                      : tr.inputPlaceholderFullscreen
+                  ? fullscreen.active && fullscreen.mode !== 'pager'
+                    ? tr.inputPlaceholderFullscreen
                     : tr.inputPlaceholderRunning
                   : tr.inputPlaceholderReady
                 : tr.inputPlaceholderConnecting

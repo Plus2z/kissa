@@ -182,7 +182,37 @@ export function PagerBubble({ msg }: { msg: ChatMessage }) {
     togglePager(msg.id)
   }
 
-  // 快捷键监听
+  // 监听全局与底部控制条派发的 Pager 动作事件
+  useEffect(() => {
+    const handlePagerAction = (e: Event) => {
+      const custom = e as CustomEvent<{ action: 'up' | 'down' | 'search' | 'exit' }>
+      if (!custom.detail?.action) return
+      switch (custom.detail.action) {
+        case 'up':
+          handlePageUp()
+          break
+        case 'down':
+          handlePageDown()
+          break
+        case 'search':
+          setShowSearch((v) => {
+            const next = !v
+            if (next) {
+              requestAnimationFrame(() => searchInputRef.current?.focus())
+            }
+            return next
+          })
+          break
+        case 'exit':
+          handleExit()
+          break
+      }
+    }
+    window.addEventListener('kissa:pager-action', handlePagerAction)
+    return () => window.removeEventListener('kissa:pager-action', handlePagerAction)
+  }, [isRunning, msg.id])
+
+  // 快捷键监听 (支持 Ctrl+ 组合键与经典 Pager 键)
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     // 处于搜索输入框时忽略常规快捷键
     if (document.activeElement === searchInputRef.current) {
@@ -192,6 +222,31 @@ export function PagerBubble({ msg }: { msg: ChatMessage }) {
         viewportRef.current?.focus()
       }
       return
+    }
+
+    // Ctrl+ 组合键优先判定
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'u') {
+        e.preventDefault()
+        handlePageUp()
+        return
+      }
+      if (e.key === 'ArrowDown' || e.key.toLowerCase() === 'd') {
+        e.preventDefault()
+        handlePageDown()
+        return
+      }
+      if (e.key.toLowerCase() === 'k' || e.key === '/') {
+        e.preventDefault()
+        setShowSearch((v) => !v)
+        requestAnimationFrame(() => searchInputRef.current?.focus())
+        return
+      }
+      if (e.key.toLowerCase() === 'e') {
+        e.preventDefault()
+        handleExit()
+        return
+      }
     }
 
     if (e.key === 'PageUp' || e.key === 'b') {
@@ -307,73 +362,20 @@ export function PagerBubble({ msg }: { msg: ChatMessage }) {
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-2">
             {/* 页码与行数指示 */}
-            <span className="font-mono-term text-[11px] text-ink-2 mr-1">
+            <span className="font-mono-term text-[11px] text-ink-2">
               {tr.pageIndicator(pageInfo.current, pageInfo.total)}
               <span className="hidden md:inline ml-1.5 text-ink-2/70">
                 ({tr.lineIndicator(pageInfo.startLine, pageInfo.endLine, lines.length)})
               </span>
             </span>
-
-            {/* 上一页按钮 */}
             <button
-              onClick={handlePageUp}
-              className="flex items-center gap-1 rounded-md border border-line bg-bubble-in px-2 py-1 text-[11px] text-ink hover:bg-ink/5 active:scale-95 transition-all"
-              title={`${tr.pageUp} (PageUp / b)`}
+              onClick={() => togglePager(msg.id)}
+              className="text-[11px] text-brand-deep hover:underline ml-1"
+              title={tr.viewRaw}
             >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="18 15 12 9 6 15" />
-              </svg>
-              <span className="hidden sm:inline">{tr.pageUp}</span>
-            </button>
-
-            {/* 下一页按钮 */}
-            <button
-              onClick={handlePageDown}
-              className="flex items-center gap-1 rounded-md border border-line bg-bubble-in px-2 py-1 text-[11px] text-ink hover:bg-ink/5 active:scale-95 transition-all"
-              title={`${tr.pageDown} (PageDown / 空格)`}
-            >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-              <span className="hidden sm:inline">{tr.pageDown}</span>
-            </button>
-
-            {/* 搜索按钮 */}
-            <button
-              onClick={() => {
-                setShowSearch((v) => !v)
-                if (!showSearch) {
-                  requestAnimationFrame(() => searchInputRef.current?.focus())
-                }
-              }}
-              className={
-                'flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] transition-all ' +
-                (showSearch
-                  ? 'border-brand bg-brand-bg text-brand-deep font-medium'
-                  : 'border-line bg-bubble-in text-ink hover:bg-ink/5')
-              }
-              title={`${tr.pagerSearch} (/)`}
-            >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <span className="hidden sm:inline">{tr.pagerSearch}</span>
-            </button>
-
-            {/* 退出按钮 */}
-            <button
-              onClick={handleExit}
-              className="flex items-center gap-1 rounded-md border border-danger/30 bg-danger/5 px-2.5 py-1 text-[11px] font-medium text-danger hover:bg-danger/10 active:scale-95 transition-all"
-              title={`${tr.pagerExit} (q)`}
-            >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-              <span>{tr.pagerExit}</span>
+              {tr.viewRaw}
             </button>
           </div>
         </div>
@@ -514,17 +516,81 @@ export function PagerBubble({ msg }: { msg: ChatMessage }) {
           })}
         </div>
 
-        {/* 底部小状态栏 */}
-        <div className="flex items-center justify-between border-t border-line/40 bg-panel/30 px-3.5 py-1 text-[10px] text-ink-2 select-none">
-          <span>
-            {tr.helpGuide ? '按键交互: 空格/b 翻页 · / 搜索 · q 退出' : 'Space/b page · / search · q exit'}
-          </span>
-          <button
-            onClick={() => togglePager(msg.id)}
-            className="text-brand-deep hover:underline"
-          >
-            {tr.viewRaw}
-          </button>
+        {/* 底部按键控制条: 上下页 + 搜索 + 退出, 包含 Ctrl+ 快捷键提示 */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line/60 bg-panel/60 px-3.5 py-2 select-none">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* 上一页按钮 */}
+            <button
+              type="button"
+              onClick={handlePageUp}
+              className="flex items-center gap-1 rounded-md border border-line bg-bubble-in px-2.5 py-1 text-[11px] font-medium text-ink hover:bg-ink/5 active:scale-95 transition-all shadow-xs"
+              title={`${tr.pageUp} (Ctrl+↑ / PageUp / b)`}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="18 15 12 9 6 15" />
+              </svg>
+              <span>{tr.pageUp}</span>
+              <kbd className="ml-1 rounded bg-ink/10 px-1 py-0.2 text-[9px] font-mono text-ink-2">Ctrl+↑</kbd>
+            </button>
+
+            {/* 下一页按钮 */}
+            <button
+              type="button"
+              onClick={handlePageDown}
+              className="flex items-center gap-1 rounded-md border border-line bg-bubble-in px-2.5 py-1 text-[11px] font-medium text-ink hover:bg-ink/5 active:scale-95 transition-all shadow-xs"
+              title={`${tr.pageDown} (Ctrl+↓ / 空格)`}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+              <span>{tr.pageDown}</span>
+              <kbd className="ml-1 rounded bg-ink/10 px-1 py-0.2 text-[9px] font-mono text-ink-2">Ctrl+↓</kbd>
+            </button>
+
+            {/* 搜索按钮 */}
+            <button
+              type="button"
+              onClick={() => {
+                setShowSearch((v) => !v)
+                if (!showSearch) {
+                  requestAnimationFrame(() => searchInputRef.current?.focus())
+                }
+              }}
+              className={
+                'flex items-center gap-1 rounded-md border px-2.5 py-1 text-[11px] font-medium transition-all shadow-xs ' +
+                (showSearch
+                  ? 'border-brand bg-brand-bg text-brand-deep font-medium'
+                  : 'border-line bg-bubble-in text-ink hover:bg-ink/5')
+              }
+              title={`${tr.pagerSearch} (Ctrl+K / /)`}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <span>{tr.pagerSearch}</span>
+              <kbd className="ml-1 rounded bg-ink/10 px-1 py-0.2 text-[9px] font-mono text-ink-2">Ctrl+K</kbd>
+            </button>
+
+            {/* 退出按钮 */}
+            <button
+              type="button"
+              onClick={handleExit}
+              className="flex items-center gap-1 rounded-md border border-danger/30 bg-danger/10 px-2.5 py-1 text-[11px] font-medium text-danger hover:bg-danger/20 active:scale-95 transition-all shadow-xs"
+              title={`${tr.pagerExit} (Ctrl+E / Esc / q)`}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+              <span>{tr.pagerExit}</span>
+              <kbd className="ml-1 rounded bg-danger/15 px-1 py-0.2 text-[9px] font-mono text-danger">Ctrl+E</kbd>
+            </button>
+          </div>
+
+          <div className="text-[10px] text-ink-2/70 hidden md:inline">
+            快捷键: Ctrl+↑/↓ 翻页 · Ctrl+K 搜索 · Ctrl+E 退出
+          </div>
         </div>
       </div>
 

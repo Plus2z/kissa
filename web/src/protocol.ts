@@ -22,7 +22,7 @@ export type ServerMessage =
   | { type: 'command_start'; commandId: string; text: string; cwd: string | null; startedAt: number }
   | { type: 'output'; commandId: string; content: string }
   | { type: 'command_end'; commandId: string; exitCode: number | null; durationMs: number }
-  | { type: 'fullscreen'; commandId: string | null; status: 'active' | 'exited' }
+  | { type: 'fullscreen'; commandId: string | null; status: 'active' | 'exited'; mode?: 'tui' | 'pager'; program?: string }
   | { type: 'input_request'; commandId: string; kind: 'password' | 'confirm' | 'text'; prompt: string }
   | { type: 'input_request_end'; commandId: string }
   | { type: 'output_structured'; commandId: string; kind: 'diff' | 'json'; data: unknown }

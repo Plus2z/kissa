@@ -48,10 +48,15 @@ export default function App() {
     return () => net.dispose()
   }, [])
 
-  // 全屏程序:进入自动切到终端视图(程序接管了终端,必须在那里交互),退出自动返回对话
+  // 全屏程序:仅真正的全屏 TUI 程序 (vim/htop/tmux 等) 自动切到终端视图;
+  // 分页长文本程序 (man/less/cat 等) 停留在对话视图以气泡呈现
   useEffect(() => {
-    setShowTerminal(fullscreen.active)
-  }, [fullscreen.active])
+    if (fullscreen.active && fullscreen.mode !== 'pager') {
+      setShowTerminal(true)
+    } else if (!fullscreen.active) {
+      setShowTerminal(false)
+    }
+  }, [fullscreen.active, fullscreen.mode])
 
   // 程序窗口标题 = 程序名称;终端名(顶栏)= 自定义名 || SSH 目标 || 本机设备名
   useEffect(() => {
@@ -282,7 +287,7 @@ export default function App() {
               <line x1="12" y1="19" x2="20" y2="19" />
             </svg>
             {showTerminal ? tr.returnToChat : tr.terminalView}
-            {fullscreen.active && (
+            {fullscreen.active && fullscreen.mode !== 'pager' && (
               <span className="ml-0.5 h-1.5 w-1.5 animate-pulse rounded-full bg-brand" title={tr.fullscreenActive} />
             )}
           </button>

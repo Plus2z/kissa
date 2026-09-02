@@ -71,6 +71,20 @@ export const I18N = {
     pwdPlaceholder: '输入密码,回车提交',
     textPromptPlaceholder: '输入内容,回车提交',
 
+    // 分页阅读器 (PagerBubble)
+    pageUp: '上一页',
+    pageDown: '下一页',
+    pagerSearch: '搜索',
+    pagerExit: '退出',
+    pagerMode: '分页阅读',
+    exitPager: '退出分页',
+    pageIndicator: (curr: number, total: number) => `第 ${curr} / ${total} 页`,
+    lineIndicator: (from: number, to: number, total: number) => `${from}-${to} / ${total} 行`,
+    matchIndicator: (curr: number, total: number) => `${curr} / ${total} 处匹配`,
+    searchInText: '在内容中搜索...',
+    noMatches: '无匹配项',
+    inputPlaceholderPager: '分页交互中: 输入 q 退出 · 空格/b 翻页 · /关键词 搜索',
+
     // 终端视图 (TerminalPane)
     terminalPaneSubFullscreen: '全屏程序运行中 — 键盘直接操作程序,退出后自动返回对话',
     terminalPaneSubTruth: '真实终端(事实来源)— 键盘输入直接进入 PTY',
@@ -225,6 +239,20 @@ export const I18N = {
     submit: 'Submit',
     pwdPlaceholder: 'Enter password, press Enter to submit',
     textPromptPlaceholder: 'Enter text, press Enter to submit',
+
+    // Pager (PagerBubble)
+    pageUp: 'Page Up',
+    pageDown: 'Page Down',
+    pagerSearch: 'Search',
+    pagerExit: 'Exit',
+    pagerMode: 'Pager View',
+    exitPager: 'Exit Pager',
+    pageIndicator: (curr: number, total: number) => `Page ${curr} / ${total}`,
+    lineIndicator: (from: number, to: number, total: number) => `Lines ${from}-${to} / ${total}`,
+    matchIndicator: (curr: number, total: number) => `${curr} / ${total} matches`,
+    searchInText: 'Search in text...',
+    noMatches: 'No matches',
+    inputPlaceholderPager: 'Pager active: type q to exit · Space/b to page · /pattern to search',
 
     // Terminal view (TerminalPane)
     terminalPaneSubFullscreen: 'Fullscreen program active — interact with keyboard, returns to chat on exit',

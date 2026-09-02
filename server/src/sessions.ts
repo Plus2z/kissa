@@ -215,7 +215,13 @@ export class Session {
             }
             break
           case 'fullscreen':
-            this.send({ type: 'fullscreen', commandId: ev.commandId, status: ev.status })
+            this.send({
+              type: 'fullscreen',
+              commandId: ev.commandId,
+              status: ev.status,
+              mode: ev.mode,
+              program: ev.program,
+            })
             break
           case 'input_request':
             this.send({

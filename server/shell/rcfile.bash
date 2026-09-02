@@ -22,9 +22,12 @@ PROMPT_COMMAND="__terminal_chat_capture${PROMPT_COMMAND:+;$PROMPT_COMMAND};__ter
 # PS0 在命令被接受、执行前展开;框架一般不动它
 PS0=$'\033]133;C\007'
 
-# 终端色彩支持
+# 终端色彩支持与分页器优化
 export CLICOLOR=1
 export COLORTERM=truecolor
+export LESS="-FRX"
+export PAGER="less -FRX"
+export MANPAGER="less -FRX"
 if [ -x /usr/bin/dircolors ]; then
   test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
 fi

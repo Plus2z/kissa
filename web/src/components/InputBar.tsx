@@ -230,6 +230,13 @@ export function InputBar() {
     if (running) {
       setValue('')
       setComp(null)
+      if (fullscreen.active && fullscreen.mode === 'pager') {
+        const trimmed = text.trim()
+        if (trimmed === 'q' || trimmed === ':q') {
+          net.send({ type: 'stdin', data: 'q' })
+          return
+        }
+      }
       net.send({ type: 'stdin', data: text + '\n' })
       return
     }
@@ -459,7 +466,9 @@ export function InputBar() {
               connStatus === 'ready'
                 ? running
                   ? fullscreen.active
-                    ? tr.inputPlaceholderFullscreen
+                    ? fullscreen.mode === 'pager'
+                      ? tr.inputPlaceholderPager
+                      : tr.inputPlaceholderFullscreen
                     : tr.inputPlaceholderRunning
                   : tr.inputPlaceholderReady
                 : tr.inputPlaceholderConnecting

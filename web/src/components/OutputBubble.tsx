@@ -9,6 +9,8 @@ import { DiffView, JsonView } from './StructuredViews'
 import { AnsiText } from '../ansi'
 import { ContextMenu, type ContextMenuItem } from './ContextMenu'
 
+import { PagerBubble } from './PagerBubble'
+
 function fmtDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`
   if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`
@@ -99,6 +101,7 @@ function InlineInput({
 /** 输出气泡 = 微信"接收方"样式:白底、左对齐、左下小尾巴、发丝线描边、宽度自适应、支持右键菜单 */
 export function OutputBubble({ msg }: { msg: ChatMessage }) {
   const toggleCollapse = useStore((s) => s.toggleCollapse)
+  const togglePager = useStore((s) => s.togglePager)
   const termAvatar = useSettings((s) => s.termAvatar)
   const language = useSettings((s) => s.language)
   const inputRequest = useStore((s) => s.inputRequest)
@@ -107,6 +110,11 @@ export function OutputBubble({ msg }: { msg: ChatMessage }) {
   const [showRaw, setShowRaw] = useState(false)
 
   const tr = t(language)
+
+  // 处于分页长文本模式时,直接挂载 PagerBubble
+  if (msg.isPager) {
+    return <PagerBubble msg={msg} />
+  }
 
   // 本命令的活跃输入请求(read -p 场景输出为空也要显示输入组件)
   const activeInput =
@@ -159,6 +167,19 @@ export function OutputBubble({ msg }: { msg: ChatMessage }) {
         </svg>
       ),
       onClick: () => toggleCollapse(msg.id),
+    })
+  }
+
+  if (!msg.structured && lines.length > 5) {
+    menuItems.push({
+      label: tr.pagerMode,
+      icon: (
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+        </svg>
+      ),
+      onClick: () => togglePager(msg.id),
     })
   }
 
@@ -224,14 +245,26 @@ export function OutputBubble({ msg }: { msg: ChatMessage }) {
               <span className="text-[10px] text-ink-2">{fmtDuration(msg.durationMs)}</span>
             )}
           </div>
-          {msg.structured && (
-            <button
-              onClick={() => setShowRaw((v) => !v)}
-              className="text-[10px] text-brand-deep hover:underline pl-3"
-            >
-              {showRaw ? tr.structuredView : tr.viewRaw}
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {!msg.structured && lines.length > 10 && (
+              <button
+                onClick={() => togglePager(msg.id)}
+                className="flex items-center gap-1 text-[10px] text-brand-deep hover:underline pl-2"
+                title={tr.pagerMode}
+              >
+                <span>📖</span>
+                <span>{tr.pagerMode}</span>
+              </button>
+            )}
+            {msg.structured && (
+              <button
+                onClick={() => setShowRaw((v) => !v)}
+                className="text-[10px] text-brand-deep hover:underline pl-3"
+              >
+                {showRaw ? tr.structuredView : tr.viewRaw}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* 内容:有结构化增强时优先渲染增强视图,可切回原文(降级路径) */}

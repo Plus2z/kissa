@@ -31,6 +31,9 @@ export interface ChatMessage {
   collapsed?: boolean
   /** 结构化增强视图(diff/json);原文仍在 content,可随时切回 */
   structured?: { kind: 'diff' | 'json'; data: unknown }
+  /** 是否以分页长文本卡片气泡呈现 */
+  isPager?: boolean
+  program?: string
 }
 
 /** 当前活跃的交互输入请求(气泡内嵌输入组件的数据) */
@@ -55,8 +58,8 @@ interface AppState {
   boundaryDepth: number
   nestedTargetName: string | null
   messages: ChatMessage[]
-  /** 全屏程序状态(备用屏缓冲区) */
-  fullscreen: { active: boolean; commandId: string | null }
+  /** 全屏程序状态(备用屏缓冲区/程序名单) */
+  fullscreen: { active: boolean; commandId: string | null; mode?: 'tui' | 'pager'; program?: string }
   /** 活跃的输入请求 */
   inputRequest: InputRequest | null
   handleServer: (msg: ServerMessage) => void
@@ -65,6 +68,32 @@ interface AppState {
   setSessionName: (name: string) => void
   reset: () => void
   toggleCollapse: (id: string) => void
+  togglePager: (id: string) => void
+}
+
+export function isPagerCommandClient(cmdline: string): boolean {
+  const skip = new Set(['sudo', 'env', 'nohup', 'command', 'exec', 'time', 'nice'])
+  const parts = cmdline.trim().split(/\s+/)
+  let prog = ''
+  for (const t of parts) {
+    if (skip.has(t)) continue
+    if (t.includes('=')) continue
+    if (t.length === 0) continue
+    prog = t.split('/').pop()!.toLowerCase()
+    break
+  }
+  const pagers = new Set([
+    'man', 'less', 'more', 'most', 'pg',
+    'cat', 'bat', 'batcat', 'tac', 'nl', 'head', 'tail',
+    'info', 'pydoc', 'perldoc', 'ri', 'tldr', 'cheat',
+    'zcat', 'zless', 'zmore', 'bzcat', 'bzless', 'xzcat', 'xzless',
+  ])
+  if (pagers.has(prog)) return true
+  const trimmed = cmdline.trim().replace(/^(?:sudo|env|command|time|nice)\s+/, '')
+  if (/^git\s+(log|diff|show|blame)\b/.test(trimmed)) return true
+  if (/^journalctl\b/.test(trimmed)) return true
+  if (/^systemctl\s+(status|cat|list-unit-files)\b/.test(trimmed)) return true
+  return false
 }
 
 export const useStore = create<AppState>()((set) => ({
@@ -138,7 +167,8 @@ export const useStore = create<AppState>()((set) => ({
         }))
         break
       }
-      case 'command_start':
+      case 'command_start': {
+        const isPager = isPagerCommandClient(msg.text)
         set((s) => ({
           messages: [
             ...s.messages,
@@ -150,18 +180,20 @@ export const useStore = create<AppState>()((set) => ({
               commandId: msg.commandId,
               content: '',
               status: 'running',
+              isPager,
             },
           ],
         }))
         break
+      }
       case 'output': {
         const lines = msg.content.split('\n').length
         set((s) => ({
           messages: s.messages.map((m) => {
             if (m.commandId !== msg.commandId || m.kind !== 'output') return m
             const next = { ...m, content: msg.content }
-            // 自动折叠只在跨过阈值时置一次 true;用户手动展开/折叠优先于后续增长
-            if (m.collapsed === undefined && lines > COLLAPSE_THRESHOLD) {
+            // 自动折叠只在非分页长文本气泡且跨过阈值时置一次 true;用户手动展开/折叠优先于后续增长
+            if (m.collapsed === undefined && lines > COLLAPSE_THRESHOLD && !m.isPager) {
               next.collapsed = true
             }
             return next
@@ -183,23 +215,36 @@ export const useStore = create<AppState>()((set) => ({
         }))
         break
       }
-      case 'fullscreen':
+      case 'fullscreen': {
+        const isPager = msg.mode === 'pager'
         set((s) => ({
-          fullscreen: { active: msg.status === 'active', commandId: msg.commandId },
-          messages: [
-            ...s.messages,
-            {
-              id: `fs-${Date.now()}-${s.messages.length}`,
-              kind: 'system',
-              ts: Date.now(),
-              text:
-                msg.status === 'active'
-                  ? '🖥 已进入全屏程序,已切换到终端视图'
-                  : '🖥 全屏程序已退出,返回对话',
-            },
-          ],
+          fullscreen: {
+            active: msg.status === 'active',
+            commandId: msg.commandId,
+            mode: msg.mode,
+            program: msg.program,
+          },
+          messages: isPager
+            ? s.messages.map((m) =>
+                m.commandId === msg.commandId && m.kind === 'output'
+                  ? { ...m, isPager: true, program: msg.program }
+                  : m,
+              )
+            : [
+                ...s.messages,
+                {
+                  id: `fs-${Date.now()}-${s.messages.length}`,
+                  kind: 'system',
+                  ts: Date.now(),
+                  text:
+                    msg.status === 'active'
+                      ? '🖥 已进入全屏程序,已切换到终端视图'
+                      : '🖥 全屏程序已退出,返回对话',
+                },
+              ],
         }))
         break
+      }
       case 'input_request':
         set({
           inputRequest: { commandId: msg.commandId, kind: msg.kind, prompt: msg.prompt },
@@ -257,6 +302,11 @@ export const useStore = create<AppState>()((set) => ({
   toggleCollapse: (id) =>
     set((s) => ({
       messages: s.messages.map((m) => (m.id === id ? { ...m, collapsed: !m.collapsed } : m)),
+    })),
+
+  togglePager: (id) =>
+    set((s) => ({
+      messages: s.messages.map((m) => (m.id === id ? { ...m, isPager: !m.isPager } : m)),
     })),
 }))
 

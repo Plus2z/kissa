@@ -29,8 +29,8 @@ export type ServerMessage =
   | { type: 'command_start'; commandId: string; text: string; cwd: string | null; startedAt: number }
   | { type: 'output'; commandId: string; content: string }
   | { type: 'command_end'; commandId: string; exitCode: number | null; durationMs: number }
-  /** 全屏程序:进入备用屏缓冲区(1049/1047/47)→ active,退出 → exited */
-  | { type: 'fullscreen'; commandId: string | null; status: 'active' | 'exited' }
+  /** 全屏程序/分页阅读器:进入备用屏缓冲区(1049/1047/47)或名单 → active,退出 → exited; mode 区分全屏 TUI 与气泡分页器 */
+  | { type: 'fullscreen'; commandId: string | null; status: 'active' | 'exited'; mode?: 'tui' | 'pager'; program?: string }
   /** 程序疑似等待输入(提示符无换行 + 输出静默);kind 决定前端输入组件形态 */
   | { type: 'input_request'; commandId: string; kind: 'password' | 'confirm' | 'text'; prompt: string }
   /** 等待结束(有新输出 / 命令结束),前端收起输入组件 */

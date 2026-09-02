@@ -28,7 +28,7 @@ export type AnnotatorEvent =
   | { kind: 'command_start'; commandId: string; text: string; cwd: string | null; startedAt: number }
   | { kind: 'output'; commandId: string; content: string }
   | { kind: 'command_end'; commandId: string; exitCode: number | null; durationMs: number }
-  | { kind: 'fullscreen'; commandId: string | null; status: 'active' | 'exited' }
+  | { kind: 'fullscreen'; commandId: string | null; status: 'active' | 'exited'; mode?: 'tui' | 'pager'; program?: string }
   | { kind: 'input_request'; commandId: string; mode: 'password' | 'confirm' | 'text'; prompt: string }
   | { kind: 'input_request_end'; commandId: string }
   | { kind: 'structured'; commandId: string; view: 'diff' | 'json'; data: unknown }
@@ -54,9 +54,9 @@ export function isRemotePrompt(text: string): boolean {
   return /(?:\[?[\w.\-()]+@[\w.\-]+[^\n]*?\]?[#$%>❯]|\(?[a-zA-Z0-9_.\-()]+\)?[#$%>❯]|bash[-0-9.]*[#$%>❯])(?:\s*)$/.test(lastLine)
 }
 
-/** 已知 TUI / 全屏程序名单 */
-const TUI_PROGRAMS = new Set([
-  'vim', 'nvim', 'vi', 'nano', 'emacs', 'less', 'more', 'most', 'man',
+/** 已知真正的 2D 交互全屏程序名单 (进入后自动切到全屏终端视图) */
+export const TUI_PROGRAMS = new Set([
+  'vim', 'nvim', 'vi', 'nano', 'emacs',
   'top', 'htop', 'btop', 'glances', 'k9s', 'lazygit', 'lazydocker',
   'tmux', 'screen',
   'claude', 'claude-code', 'codex', 'gemini', 'aider', 'chatgpt', 'qwen', 'iflow',
@@ -64,6 +64,23 @@ const TUI_PROGRAMS = new Set([
   'opencode', 'goose', 'amp', 'q', 'kiro',
   'cursor-agent', 'copilot', 'kimi', 'openclaw', 'crush', 'openhands', 'droid',
 ])
+
+/** 已知纯文本/分页长文本阅读程序名单 (在对话流中以气泡呈现,不跳全屏终端) */
+export const PAGER_PROGRAMS = new Set([
+  'man', 'less', 'more', 'most', 'pg',
+  'info', 'pydoc', 'perldoc', 'ri', 'tldr', 'cheat',
+  'bat', 'batcat',
+])
+
+export function isPagerCommand(cmdline: string): boolean {
+  const prog = invokedProgram(cmdline)
+  if (PAGER_PROGRAMS.has(prog)) return true
+  const trimmed = cmdline.trim().replace(/^(?:sudo|env|command|time|nice)\s+/, '')
+  if (/^git\s+(log|diff|show|blame)\b/.test(trimmed)) return true
+  if (/^journalctl\b/.test(trimmed)) return true
+  if (/^systemctl\s+(status|cat|list-unit-files)\b/.test(trimmed)) return true
+  return false
+}
 
 function invokedProgram(cmdline: string): string {
   const skip = new Set(['sudo', 'env', 'nohup', 'command', 'exec', 'time', 'nice'])
@@ -154,6 +171,8 @@ export class Osc133Annotator {
   // 全屏状态
   private altScreen = false
   private tuiListed = false
+  private currentProgram = ''
+  private currentIsPager = false
   private fsEmitted = false
   private fsGraceTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -223,6 +242,8 @@ export class Osc133Annotator {
       this.tuiListed = false
       this.altScreen = false
       this.emitFullscreenEdge(true)
+      this.currentProgram = ''
+      this.currentIsPager = false
     }
     this.flushOutput(true)
     if (this.commandId !== null) {
@@ -299,6 +320,8 @@ export class Osc133Annotator {
 
   private emitFullscreenEdge(force = false): void {
     const active = this.altScreen || this.tuiListed
+    const mode: 'tui' | 'pager' = this.currentIsPager ? 'pager' : 'tui'
+    const program = this.currentProgram || undefined
     if (active === this.fsEmitted) {
       if (this.fsGraceTimer) {
         clearTimeout(this.fsGraceTimer)
@@ -312,7 +335,7 @@ export class Osc133Annotator {
         this.fsGraceTimer = null
       }
       this.fsEmitted = true
-      this.onEvent({ kind: 'fullscreen', commandId: this.commandId, status: 'active' })
+      this.onEvent({ kind: 'fullscreen', commandId: this.commandId, status: 'active', mode, program })
       return
     }
     if (force) {
@@ -321,7 +344,7 @@ export class Osc133Annotator {
         this.fsGraceTimer = null
       }
       this.fsEmitted = false
-      this.onEvent({ kind: 'fullscreen', commandId: this.commandId, status: 'exited' })
+      this.onEvent({ kind: 'fullscreen', commandId: this.commandId, status: 'exited', mode, program })
       return
     }
     if (this.fsGraceTimer) return
@@ -330,7 +353,7 @@ export class Osc133Annotator {
       const nowActive = this.altScreen || this.tuiListed
       if (nowActive === this.fsEmitted) return
       this.fsEmitted = nowActive
-      this.onEvent({ kind: 'fullscreen', commandId: this.commandId, status: 'exited' })
+      this.onEvent({ kind: 'fullscreen', commandId: this.commandId, status: 'exited', mode, program })
     }, 400)
     this.fsGraceTimer.unref?.()
   }
@@ -383,7 +406,9 @@ export class Osc133Annotator {
             cwd: this.lastCwd,
             startedAt: this.startedAt,
           })
-          this.tuiListed = TUI_PROGRAMS.has(invokedProgram(text))
+          this.currentProgram = invokedProgram(text)
+          this.currentIsPager = isPagerCommand(text)
+          this.tuiListed = TUI_PROGRAMS.has(this.currentProgram) || this.currentIsPager
           this.emitFullscreenEdge()
 
           // 嵌套 Shell 触发规则检测 (ssh, sudo -i, docker exec -it 等)
@@ -409,6 +434,8 @@ export class Osc133Annotator {
         this.altScreen = false
         this.tuiListed = false
         this.emitFullscreenEdge(true)
+        this.currentProgram = ''
+        this.currentIsPager = false
         if (this.commandId !== null) {
           this.detectStructured()
           const ec = param !== undefined && /^\d+$/.test(param) ? Number(param) : null

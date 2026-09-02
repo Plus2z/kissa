@@ -206,4 +206,41 @@ console.log('🧪 Starting SSH & Nested Shell Boundary Tests...')
   console.log('    ✓ stripAnsi charset cleanup and Chinese prompt detection passed')
 }
 
+// Test 7: 分页阅读程序 (man, less, git log) 与真正全屏 TUI (vim) 的 mode 区分
+{
+  console.log('  Testing Pager vs TUI mode classification...')
+  const { isPagerCommand } = await import('../server/dist/osc133.js')
+  assert.ok(isPagerCommand('man ls'), 'man should be recognized as pager command')
+  assert.ok(isPagerCommand('less /var/log/syslog'), 'less should be recognized as pager command')
+  assert.ok(isPagerCommand('git log -n 20'), 'git log should be recognized as pager command')
+  assert.ok(isPagerCommand('git diff HEAD~1'), 'git diff should be recognized as pager command')
+  assert.ok(isPagerCommand('journalctl -u nginx'), 'journalctl should be recognized as pager command')
+  assert.ok(!isPagerCommand('vim app.js'), 'vim should not be recognized as pager command')
+  assert.ok(!isPagerCommand('htop'), 'htop should not be recognized as pager command')
+
+  // 验证 annotator 对 man 发出 mode: 'pager'
+  const events = []
+  const annotator = new Osc133Annotator((ev) => events.push(ev))
+  annotator.write('\x1b]133;A;/home\x07\x1b]133;B\x07man ls\x1b]133;C\x07')
+  const manFs = events.find((e) => e.kind === 'fullscreen' && e.status === 'active')
+  assert.ok(manFs, 'man must trigger fullscreen event')
+  assert.equal(manFs.mode, 'pager', 'man fullscreen mode must be pager')
+  assert.equal(manFs.program, 'man')
+
+  // 退出 man
+  annotator.write('\x1b]133;D;0\x07')
+  const manExit = events.find((e) => e.kind === 'fullscreen' && e.status === 'exited')
+  assert.ok(manExit, 'man exit must trigger exited event')
+  assert.equal(manExit.mode, 'pager')
+
+  // 验证 annotator 对 vim 发出 mode: 'tui'
+  annotator.write('\x1b]133;A;/home\x07\x1b]133;B\x07vim foo.txt\x1b]133;C\x07')
+  const vimFs = events.find((e) => e.kind === 'fullscreen' && e.status === 'active' && e.program === 'vim')
+  assert.ok(vimFs, 'vim must trigger fullscreen event')
+  assert.equal(vimFs.mode, 'tui', 'vim fullscreen mode must be tui')
+
+  annotator.close(0)
+  console.log('    ✓ Pager vs TUI mode classification verified')
+}
+
 console.log('🎉 All SSH & Nested Shell Boundary Tests Passed!')

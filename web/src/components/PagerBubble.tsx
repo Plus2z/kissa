@@ -57,6 +57,7 @@ export function PagerBubble({ msg }: { msg: ChatMessage }) {
 
   // 滚动与页码计算
   const [pageInfo, setPageInfo] = useState({ current: 1, total: 1, startLine: 1, endLine: 1 })
+  const containerRef = useRef<HTMLDivElement>(null)
   const viewportRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
@@ -212,6 +213,24 @@ export function PagerBubble({ msg }: { msg: ChatMessage }) {
     return () => window.removeEventListener('kissa:pager-action', handlePagerAction)
   }, [isRunning, msg.id])
 
+  // 挂载时自动退出输入状态，让 PagerBubble 获得焦点以直接响应快捷键
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('kissa:blur-input'))
+    const t = setTimeout(() => {
+      containerRef.current?.focus({ preventScroll: true })
+    }, 40)
+    return () => clearTimeout(t)
+  }, [])
+
+  // 监听焦点返回卡片事件 (如按下 Ctrl+Tab)
+  useEffect(() => {
+    const handleFocusPager = () => {
+      containerRef.current?.focus({ preventScroll: true })
+    }
+    window.addEventListener('kissa:focus-pager', handleFocusPager)
+    return () => window.removeEventListener('kissa:focus-pager', handleFocusPager)
+  }, [])
+
   // 快捷键监听 (支持 Ctrl+ 组合键与经典 Pager 键)
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     // 处于搜索输入框时忽略常规快捷键
@@ -219,8 +238,22 @@ export function PagerBubble({ msg }: { msg: ChatMessage }) {
       if (e.key === 'Escape') {
         e.preventDefault()
         setShowSearch(false)
-        viewportRef.current?.focus()
+        containerRef.current?.focus()
       }
+      return
+    }
+
+    // Tab (Tap): 从分页卡片快速切入底部输入框
+    if (e.key === 'Tab' && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault()
+      window.dispatchEvent(new CustomEvent('kissa:focus-input'))
+      return
+    }
+
+    // Ctrl+Tab (Ctrl+Tap): 维持在卡片焦点
+    if (e.key === 'Tab' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault()
+      containerRef.current?.focus({ preventScroll: true })
       return
     }
 
@@ -324,6 +357,7 @@ export function PagerBubble({ msg }: { msg: ChatMessage }) {
     <div className="flex items-start gap-2.5 px-4 py-2">
       <Avatar cfg={termAvatar} kind="term" />
       <div
+        ref={containerRef}
         tabIndex={0}
         onKeyDown={handleKeyDown}
         onContextMenu={(e) => {
@@ -589,7 +623,7 @@ export function PagerBubble({ msg }: { msg: ChatMessage }) {
           </div>
 
           <div className="text-[10px] text-ink-2/70 hidden md:inline">
-            快捷键: Ctrl+↑/↓ 翻页 · Ctrl+K 搜索 · Ctrl+E 退出
+            快捷键: Ctrl+↑/↓ 翻页 · Ctrl+K 搜索 · Ctrl+E 退出 · Tab 输入 · Ctrl+Tab 退出输入
           </div>
         </div>
       </div>

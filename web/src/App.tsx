@@ -127,8 +127,8 @@ export default function App() {
   // 全局快捷键与事件监听
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      // 光标不在输入框时按 Tab: 直接进入输入模式
-      if (e.key === 'Tab' && !showTerminal && !showSettings && !showSessions && !showSearch) {
+      // 光标不在输入框时按 Tab (Tap): 直接进入输入模式
+      if (e.key === 'Tab' && !e.ctrlKey && !e.metaKey && !showTerminal && !showSettings && !showSessions && !showSearch) {
         const active = document.activeElement as HTMLElement | null
         const isInput = active?.tagName === 'INPUT' || active?.tagName === 'TEXTAREA'
         if (!isInput) {
@@ -138,8 +138,19 @@ export default function App() {
         }
       }
 
-      // Pager 专属快捷键 (Ctrl+组合键): 仅当有分页长文本运行时生效
-      if (fullscreen.active && fullscreen.mode === 'pager' && (e.ctrlKey || e.metaKey)) {
+      // 按 Ctrl+Tab (Ctrl+Tap): 退出输入状态，焦点返回分页卡片
+      if (e.key === 'Tab' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault()
+        window.dispatchEvent(new CustomEvent('kissa:blur-input'))
+        window.dispatchEvent(new CustomEvent('kissa:focus-pager'))
+        return
+      }
+
+      // Pager 专属快捷键 (Ctrl+组合键): 运行中或存在分页卡片时生效
+      const hasPager =
+        (fullscreen.active && fullscreen.mode === 'pager') ||
+        useStore.getState().messages.some((m) => m.isPager)
+      if (hasPager && (e.ctrlKey || e.metaKey)) {
         if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'u') {
           e.preventDefault()
           window.dispatchEvent(new CustomEvent('kissa:pager-action', { detail: { action: 'up' } }))

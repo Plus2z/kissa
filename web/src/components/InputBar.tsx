@@ -82,17 +82,32 @@ export function InputBar() {
     const handleFocus = () => {
       inputRef.current?.focus()
     }
+    const handleBlur = () => {
+      inputRef.current?.blur()
+    }
 
     window.addEventListener('kissa:fill-input', handleFill)
     window.addEventListener('kissa:focus-input', handleFocus)
+    window.addEventListener('kissa:blur-input', handleBlur)
     return () => {
       window.removeEventListener('kissa:fill-input', handleFill)
       window.removeEventListener('kissa:focus-input', handleFocus)
+      window.removeEventListener('kissa:blur-input', handleBlur)
     }
   }, [])
 
+  // 当进入 Pager 分页模式时，自动退出输入状态，让焦点留给气泡卡片快捷键
+  useEffect(() => {
+    if (fullscreen.active && fullscreen.mode === 'pager') {
+      inputRef.current?.blur()
+      window.dispatchEvent(new CustomEvent('kissa:focus-pager'))
+    }
+  }, [fullscreen.active, fullscreen.mode])
+
   // 自动聚焦
   useEffect(() => {
+    // 若当前已经是 pager 模式，则不抢占焦点
+    if (fullscreen.active && fullscreen.mode === 'pager') return
     inputRef.current?.focus()
   }, [])
 
@@ -262,8 +277,19 @@ export function InputBar() {
       return
     }
 
-    // Pager 模式快捷键 (Ctrl+组合键)
-    if (fullscreen.active && fullscreen.mode === 'pager' && (e.ctrlKey || e.metaKey)) {
+    // Ctrl+Tab / Ctrl+Tap: 退出输入状态，焦点返回分页卡片
+    if (e.key === 'Tab' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault()
+      setComp(null)
+      inputRef.current?.blur()
+      window.dispatchEvent(new CustomEvent('kissa:focus-pager'))
+      return
+    }
+
+    // Pager 模式快捷键 (Ctrl+组合键): 处于分页器运行中或有分页长文本卡片时
+    const hasPager =
+      (fullscreen.active && fullscreen.mode === 'pager') || messages.some((m) => m.isPager)
+    if (hasPager && (e.ctrlKey || e.metaKey)) {
       if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'u') {
         e.preventDefault()
         window.dispatchEvent(new CustomEvent('kissa:pager-action', { detail: { action: 'up' } }))

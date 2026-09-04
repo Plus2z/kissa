@@ -14,6 +14,8 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6.svg?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](./LICENSE)
 
+[English](./README_EN.md) | **简体中文**
+
 [功能特性](#-核心特性) • [安装与运行](#-安装与运行) • [架构原理](#-系统架构) • [快捷指令](#-快捷指令与快捷键) • [高级配置](#-高级配置与安全)
 
 </div>

@@ -8,7 +8,7 @@
 *以真实终端状态为事实来源（Source of Truth），聊天气泡只是增强视图*
 
 [![Version](https://img.shields.io/badge/version-0.2.1-blue.svg?style=flat-square)](./package.json)
-[![Platform](https://img.shields.io/badge/platform-Linux%20(AppImage%20%7C%20RPM)-orange.svg?style=flat-square)](https://github.com/)
+[![Platform](https://img.shields.io/badge/platform-Linux%20(AppImage%20%7C%20RPM)-orange.svg?style=flat-square)](https://github.com/Plus2z/kissa)
 [![Electron](https://img.shields.io/badge/Electron-33.4.11-47848F.svg?style=flat-square&logo=electron)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18-61DAFB.svg?style=flat-square&logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6.svg?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
@@ -17,6 +17,10 @@
 [English](./README_EN.md) | **简体中文**
 
 [功能特性](#-核心特性) • [安装与运行](#-安装与运行) • [架构原理](#-系统架构) • [快捷指令](#-快捷指令与快捷键) • [高级配置](#-高级配置与安全)
+
+<br/>
+
+<img src="./docs/assets/screenshot.png" alt="Kissa Screenshot" width="850" />
 
 </div>
 

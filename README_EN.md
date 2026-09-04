@@ -24,12 +24,12 @@
 
 ## 📖 Introduction
 
-**Kissa** is an innovative conversational terminal application. It breaks away from the rigid, monolithic scrolling text of traditional terminal emulators by leveraging sideband state machines and Shell Integration to map command inputs, outputs, execution metrics, exit codes, and interactive prompts into clean, intuitive **conversation bubbles**.
+**Kissa (喫茶)** draws its name from the Japanese word for "tea-drinking" or a cozy café (*kissaten*). The idea was born from an imagery of calm, orderly conversation—interacting with a terminal should feel as unhurried and delightful as sipping coffee in an afternoon tearoom. It was never built to be a rigid, world-disrupting "productivity behemoth." Built purely **just for fun**, Kissa reimagines the cold, monochrome scrolling waterfall into a charming, aesthetic tea chat between human and machine.
 
-Unlike purely visual wrappers, Kissa strictly adheres to the core design principle: **"The real terminal state is the single source of truth"**:
-- The raw PTY byte stream runs uninhibited in the background truth layer—never modified, never lost.
-- Chat bubbles are non-intrusive, sideband enhancements.
-- When encountering complex full-screen applications, TUIs, or unpredictable output streams, Kissa provides seamless auto/manual switching back to a standard terminal view, ensuring a **100% reliable hard fallback guarantee**.
+### Core Highlights
+
+- **Bubble-Based Conversational Flow**: Say goodbye to cluttered, infinite walls of scrolling text. Deeply integrated with your shell via an out-of-band state machine, commands, outputs, duration metrics, and exit codes are reconstructed into clean, self-contained dialogue bubbles—every press of Enter feels as natural as sending a message.
+- **The Real Terminal as Single Source of Truth**: Unlike superficial UI wrappers, Kissa's underlying PTY byte stream runs uninhibited in the background—never tampering with, swallowing, or dropping data. The bubbles are merely a harmless, non-intrusive sideband enhancement; whenever complex full-screen applications or unfamiliar output patterns are encountered, Kissa seamlessly falls back to a standard terminal view with a 100% reliable hard fallback guarantee.
 
 ---
 

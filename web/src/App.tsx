@@ -146,33 +146,6 @@ export default function App() {
         return
       }
 
-      // Pager 专属快捷键 (Ctrl+组合键): 运行中或存在分页卡片时生效
-      const hasPager =
-        (fullscreen.active && fullscreen.mode === 'pager') ||
-        useStore.getState().messages.some((m) => m.isPager)
-      if (hasPager && (e.ctrlKey || e.metaKey)) {
-        if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'u') {
-          e.preventDefault()
-          window.dispatchEvent(new CustomEvent('kissa:pager-action', { detail: { action: 'up' } }))
-          return
-        }
-        if (e.key === 'ArrowDown' || e.key.toLowerCase() === 'd') {
-          e.preventDefault()
-          window.dispatchEvent(new CustomEvent('kissa:pager-action', { detail: { action: 'down' } }))
-          return
-        }
-        if (e.key.toLowerCase() === 'k' || e.key === '/') {
-          e.preventDefault()
-          window.dispatchEvent(new CustomEvent('kissa:pager-action', { detail: { action: 'search' } }))
-          return
-        }
-        if (e.key.toLowerCase() === 'e') {
-          e.preventDefault()
-          window.dispatchEvent(new CustomEvent('kissa:pager-action', { detail: { action: 'exit' } }))
-          return
-        }
-      }
-
       // Ctrl+F / Cmd+F: 触发搜索
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f' && !showTerminal) {
         e.preventDefault()

@@ -286,32 +286,6 @@ export function InputBar() {
       return
     }
 
-    // Pager 模式快捷键 (Ctrl+组合键): 处于分页器运行中或有分页长文本卡片时
-    const hasPager =
-      (fullscreen.active && fullscreen.mode === 'pager') || messages.some((m) => m.isPager)
-    if (hasPager && (e.ctrlKey || e.metaKey)) {
-      if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'u') {
-        e.preventDefault()
-        window.dispatchEvent(new CustomEvent('kissa:pager-action', { detail: { action: 'up' } }))
-        return
-      }
-      if (e.key === 'ArrowDown' || e.key.toLowerCase() === 'd') {
-        e.preventDefault()
-        window.dispatchEvent(new CustomEvent('kissa:pager-action', { detail: { action: 'down' } }))
-        return
-      }
-      if (e.key.toLowerCase() === 'k' || e.key === '/') {
-        e.preventDefault()
-        window.dispatchEvent(new CustomEvent('kissa:pager-action', { detail: { action: 'search' } }))
-        return
-      }
-      if (e.key.toLowerCase() === 'e') {
-        e.preventDefault()
-        window.dispatchEvent(new CustomEvent('kissa:pager-action', { detail: { action: 'exit' } }))
-        return
-      }
-    }
-
     if (comp && comp.items.length > 0) {
       if (e.key === 'ArrowDown' || (e.key === 'Tab' && !e.shiftKey)) {
         e.preventDefault()

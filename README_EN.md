@@ -111,7 +111,7 @@ sudo dnf install ./Kissa-0.2.1.x86_64.rpm
 
 #### 1. Clone and Install Dependencies
 ```bash
-git clone https://github.com/your-username/kissa.git
+git clone https://github.com/Plus2z/kissa.git
 cd kissa
 npm install
 ```

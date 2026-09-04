@@ -4,7 +4,7 @@
   "private": true,
   "description": "Kissa 桌面版(Electron)",
   "author": "Kissa",
-  "homepage": "https://github.com/kissa-chat/kissa",
+  "homepage": "https://github.com/Plus2z/kissa",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
